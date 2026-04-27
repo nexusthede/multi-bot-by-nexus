@@ -7,10 +7,18 @@ const fs = require('fs');
 const setupWelcome = require('./events/welcome');
 
 // prefix
-const PREFIX = ".";
+const PREFIX = ",";
 
 // welcome channel ID
 const WELCOME_CHANNEL_ID = '1478295508593283123';
+
+// =========================
+// ENV SAFETY (IMPORTANT)
+// =========================
+if (!process.env.TOKEN) {
+  console.log("❌ Missing TOKEN in environment variables");
+  process.exit(1);
+}
 
 const client = new Client({
   intents: [
@@ -43,8 +51,11 @@ client.on('messageCreate', message => {
   if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-  const commandName = args.shift()?.toLowerCase();
 
+  // =========================
+  // FIXED CRASH (IMPORTANT)
+  // =========================
+  const commandName = args.shift()?.toLowerCase();
   if (!commandName) return;
 
   const command = client.commands.get(commandName);
@@ -58,7 +69,10 @@ client.on('messageCreate', message => {
   }
 });
 
-client.login(process.env.TOKEN);
+// login
+client.login(process.env.TOKEN).catch(err => {
+  console.error("❌ Login failed:", err);
+});
 
 // safety
 process.on('unhandledRejection', console.error);
