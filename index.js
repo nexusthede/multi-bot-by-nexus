@@ -1,12 +1,26 @@
 require('dotenv').config();
+
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('fs');
+const express = require('express');
 const connectMongo = require('./database/mongo');
 
 const PREFIX = ",";
 
+// Express server (required for Render)
+const app = express();
+app.get('/', (req, res) => res.send('Bot is running'));
+app.listen(process.env.PORT || 3000, () => {
+  console.log('🌐 Web server ready');
+});
+
+// Discord client
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
 });
 
 client.commands = new Collection();
@@ -19,14 +33,14 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-// Ready
+// Ready event
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   await connectMongo();
 });
 
-// Message handler (prefix system)
-client.on('messageCreate', async message => {
+// Prefix command handler
+client.on('messageCreate', async (message) => {
   if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
@@ -45,6 +59,6 @@ client.on('messageCreate', async message => {
 
 client.login(process.env.TOKEN);
 
-// basic error safety
+// Error safety (important for hosting)
 process.on('unhandledRejection', console.error);
 process.on('uncaughtException', console.error);
