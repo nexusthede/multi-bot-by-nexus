@@ -1,9 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
-const hierarchy = require("../hierarchy");
 
-// =========================
-// CONFIG
-// =========================
 const CONFIG = {
   roles: {
     owner: ["1449945270782525502", "1466497373776908353"],
@@ -17,22 +13,13 @@ const CONFIG = {
 };
 
 // =========================
-// HELPERS
+// AUTH
 // =========================
-function isOwner(member) {
-  return CONFIG.roles.owner.some(id => member.roles.cache.has(id));
-}
-
-function isAdmin(member) {
-  return CONFIG.roles.admin.some(id => member.roles.cache.has(id));
-}
-
 function isAuthorized(member) {
-  return isOwner(member) || isAdmin(member);
-}
-
-function getTarget(message) {
-  return message.mentions.members.first();
+  return (
+    CONFIG.roles.owner.some(id => member.roles.cache.has(id)) ||
+    CONFIG.roles.admin.some(id => member.roles.cache.has(id))
+  );
 }
 
 // =========================
@@ -57,20 +44,20 @@ module.exports = {
     if (!message.guild || message.author.bot) return;
 
     const sub = args[0]?.toLowerCase();
-    const target = getTarget(message);
+    const target = message.mentions.members.first();
 
     const jailRole = message.guild.roles.cache.get(CONFIG.roles.jail);
     const logChannel = message.guild.channels.cache.get(CONFIG.channels.logs);
 
     // =========================
-    // PERMISSION CHECK
+    // PERMISSION
     // =========================
     if (!isAuthorized(message.member)) {
-      return message.reply("❌ You don’t have permission to use this command.");
+      return message.reply("❌ No permission.");
     }
 
     // =========================
-    // TARGET CHECK
+    // TARGET
     // =========================
     if (!target) {
       return message.reply("❌ Mention a user.");
@@ -84,33 +71,14 @@ module.exports = {
       return message.reply("❌ You cannot use this on bots.");
     }
 
-    // =========================
-    // JAIL
-    // =========================
-    if (!sub || sub === "add") {
-      if (!jailRole) return message.reply("❌ Jail role not set.");
-
-      await target.roles.add(jailRole).catch(() => {
-        return message.reply("❌ I cannot jail this user.");
-      });
-
-      if (logChannel) {
-        logChannel.send({
-          embeds: [
-            logEmbed("🚫 USER JAILED", target, message.author, 0xE74C3C)
-          ]
-        }).catch(() => {});
-      }
-
-      return message.reply(`🚫 ${target.user.tag} has been jailed.`);
+    if (!jailRole) {
+      return message.reply("❌ Jail role not set.");
     }
 
     // =========================
     // UNJAIL
     // =========================
-    if (sub === "remove" || sub === "unjail") {
-      if (!jailRole) return message.reply("❌ Jail role not set.");
-
+    if (sub === "unjail" || sub === "remove") {
       await target.roles.remove(jailRole).catch(() => {
         return message.reply("❌ I cannot unjail this user.");
       });
@@ -127,8 +95,20 @@ module.exports = {
     }
 
     // =========================
-    // INVALID
+    // JAIL (DEFAULT)
     // =========================
-    return message.reply("❌ Use: `.jail @user` or `.jail unjail @user`");
+    await target.roles.add(jailRole).catch(() => {
+      return message.reply("❌ I cannot jail this user.");
+    });
+
+    if (logChannel) {
+      logChannel.send({
+        embeds: [
+          logEmbed("🚫 USER JAILED", target, message.author, 0xE74C3C)
+        ]
+      }).catch(() => {});
+    }
+
+    return message.reply(`🚫 ${target.user.tag} has been jailed.`);
   }
 };
