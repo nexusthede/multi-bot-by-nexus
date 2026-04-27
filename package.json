@@ -1,1 +1,18 @@
-
+{
+  "name": "simple-prefix-bot",
+  "version": "1.0.0",
+  "description": "Minimal Discord bot for Render",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.3.0"
+  }
+}
