@@ -7,7 +7,7 @@ const fs = require('fs');
 const setupWelcome = require('./events/welcome');
 
 // prefix
-const PREFIX = ",";
+const PREFIX = ".";
 
 // welcome channel ID
 const WELCOME_CHANNEL_ID = '1478295508593283123';
@@ -43,7 +43,9 @@ client.on('messageCreate', message => {
   if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
+  const commandName = args.shift()?.toLowerCase();
+
+  if (!commandName) return;
 
   const command = client.commands.get(commandName);
   if (!command) return;
