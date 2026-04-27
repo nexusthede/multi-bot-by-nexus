@@ -5,9 +5,9 @@ const fs = require('fs');
 const express = require('express');
 
 // =========================
-// MONGODB
+// MONGODB (FIXED PATH)
 // =========================
-const connectMongo = require('./mongo');
+const connectMongo = require('./database/mongo'); // ✅ FIXED
 connectMongo();
 
 // =========================
