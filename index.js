@@ -5,7 +5,13 @@ const fs = require('fs');
 const express = require('express');
 
 // =========================
-// WEB SERVER (RENDER KEEP-ALIVE)
+// MONGODB
+// =========================
+const connectMongo = require('./mongo');
+connectMongo();
+
+// =========================
+// WEB SERVER (RENDER KEEP ALIVE)
 // =========================
 const app = express();
 
@@ -28,7 +34,6 @@ const setupWelcome = require('./events/welcome');
 // CONFIG
 // =========================
 const PREFIX = ".";
-
 const WELCOME_CHANNEL_ID = '1478295508593283123';
 
 // =========================
@@ -106,7 +111,7 @@ client.login(process.env.TOKEN).catch(err => {
 });
 
 // =========================
-// SAFETY CRASH HANDLERS
+// SAFETY
 // =========================
 process.on('unhandledRejection', console.error);
 process.on('uncaughtException', console.error);
