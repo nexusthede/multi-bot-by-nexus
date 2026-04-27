@@ -16,9 +16,6 @@ function permissionEmbed(text) {
   return new EmbedBuilder().setColor(0xF1C40F).setDescription(text || "You don’t have permission to do that.");
 }
 
-// =========================
-// ACTION EMBED
-// =========================
 function actionEmbed({ action, target, moderator, reason, duration }) {
   const map = {
     BAN: "was banned",
@@ -30,54 +27,24 @@ function actionEmbed({ action, target, moderator, reason, duration }) {
   };
 
   let text = `${target} ${map[action] || "was moderated"} by ${moderator}`;
-
-  if (action === "MUTE" && duration) {
-    text += ` for ${duration}`;
-  }
+  if (action === "MUTE" && duration) text += ` for ${duration}`;
 
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setDescription(`${text}.`)
+    .setDescription(text + ".")
     .addFields({
       name: "Reason",
-      value: reason || "No reason provided",
-      inline: false
+      value: reason || "No reason provided"
     });
 }
 
 // =========================
 // HELPERS
 // =========================
-
-// ONLY mentions allowed
-function resolveMention(message) {
-  return message.mentions.members.first() || null;
-}
-
-// ONLY ID allowed (unban)
-function resolveId(input) {
-  return /^\d{17,20}$/.test(input) ? input : null;
-}
-
-// TIME PARSER
-function parseTime(input) {
-  if (!/^(\d+)(s|m|h|d)$/.test(input)) return null;
-
-  const value = parseInt(input.slice(0, -1));
-  const unit = input.slice(-1);
-
-  const map = {
-    s: 1000,
-    m: 60000,
-    h: 3600000,
-    d: 86400000
-  };
-
-  return value * map[unit];
-}
+const getTarget = (m) => m.mentions.members.first();
 
 // =========================
-// MAIN COMMAND HANDLER
+// COMMAND HANDLER
 // =========================
 module.exports = {
   name: "moderation",
@@ -86,19 +53,25 @@ module.exports = {
     if (!message.guild || message.author.bot) return;
 
     const cmd = message.content.slice(1).split(/ +/)[0]?.toLowerCase();
+    const target = getTarget(message);
+
+    // =========================
+    // REQUIRED CHECK (same style as jail)
+    // =========================
+    if (["ban","kick","warn","mute","unmute"].includes(cmd)) {
+      if (!target)
+        return message.reply({ embeds: [failEmbed("Mention a user.")] });
+
+      const check = await hierarchy.canModerate(message.member, target);
+      if (!check.ok)
+        return message.reply({ embeds: [permissionEmbed(check.reason)] });
+    }
 
     // =========================
     // BAN
     // =========================
     if (cmd === "ban" || cmd === "b") {
-      const target = resolveMention(message);
-      if (!target) return message.reply({ embeds: [failEmbed("Mention a user.")] });
-
-      const check = await hierarchy.canModerate(message.member, target);
-      if (!check.ok) return message.reply({ embeds: [permissionEmbed(check.reason)] });
-
       const reason = args.slice(1).join(" ") || "No reason";
-
       await target.ban({ reason });
 
       return message.reply({
@@ -115,43 +88,10 @@ module.exports = {
     }
 
     // =========================
-    // UNBAN
-    // =========================
-    if (cmd === "unban" || cmd === "ub") {
-      const id = resolveId(args[0]);
-      if (!id) return message.reply({ embeds: [failEmbed("Provide a valid user ID.")] });
-
-      try {
-        await message.guild.members.unban(id);
-
-        return message.reply({
-          embeds: [
-            successEmbed("User was unbanned."),
-            actionEmbed({
-              action: "UNBAN",
-              target: `<@${id}>`,
-              moderator: message.author.tag,
-              reason: args.slice(1).join(" ") || "No reason"
-            })
-          ]
-        });
-      } catch {
-        return message.reply({ embeds: [failEmbed("User is not banned or cannot be unbanned.")] });
-      }
-    }
-
-    // =========================
     // KICK
     // =========================
     if (cmd === "kick" || cmd === "k") {
-      const target = resolveMention(message);
-      if (!target) return message.reply({ embeds: [failEmbed("Mention a user.")] });
-
-      const check = await hierarchy.canModerate(message.member, target);
-      if (!check.ok) return message.reply({ embeds: [permissionEmbed(check.reason)] });
-
       const reason = args.slice(1).join(" ") || "No reason";
-
       await target.kick(reason);
 
       return message.reply({
@@ -168,23 +108,44 @@ module.exports = {
     }
 
     // =========================
-    // MUTE / TIMEOUT
+    // WARN
     // =========================
-    if (cmd === "mute" || cmd === "timeout" || cmd === "tm") {
-      const target = resolveMention(message);
-      if (!target) return message.reply({ embeds: [failEmbed("Mention a user.")] });
+    if (cmd === "warn") {
+      const reason = args.slice(1).join(" ") || "No reason";
 
-      const time = parseTime(args[1]);
-      if (!time) return message.reply({ embeds: [failEmbed("Invalid time format (10m, 1h, etc).")] });
+      if (!global.warns) global.warns = {};
+      if (!global.warns[target.id]) global.warns[target.id] = [];
 
-      const check = await hierarchy.canModerate(message.member, target);
-      if (!check.ok) return message.reply({ embeds: [permissionEmbed(check.reason)] });
+      global.warns[target.id].push({
+        reason,
+        mod: message.author.id,
+        time: Date.now()
+      });
 
+      return message.reply({
+        embeds: [
+          successEmbed(`${target.user.tag} was warned.`),
+          actionEmbed({
+            action: "WARN",
+            target: target.user.tag,
+            moderator: message.author.tag,
+            reason
+          })
+        ]
+      });
+    }
+
+    // =========================
+    // MUTE
+    // =========================
+    if (cmd === "mute" || cmd === "timeout") {
+      const time = args[1];
       const reason = args.slice(2).join(" ") || "No reason";
 
-      await target.timeout(time, reason).catch(() => {
-        return message.reply({ embeds: [failEmbed("I cannot mute this user.")] });
-      });
+      const ms = convertTime(time);
+      if (!ms) return message.reply({ embeds: [failEmbed("Use 10m / 1h / 1d")] });
+
+      await target.timeout(ms, reason);
 
       return message.reply({
         embeds: [
@@ -194,7 +155,7 @@ module.exports = {
             target: target.user.tag,
             moderator: message.author.tag,
             reason,
-            duration: args[1]
+            duration: time
           })
         ]
       });
@@ -203,16 +164,8 @@ module.exports = {
     // =========================
     // UNMUTE
     // =========================
-    if (cmd === "unmute" || cmd === "untimeout") {
-      const target = resolveMention(message);
-      if (!target) return message.reply({ embeds: [failEmbed("Mention a user.")] });
-
-      const check = await hierarchy.canModerate(message.member, target);
-      if (!check.ok) return message.reply({ embeds: [permissionEmbed(check.reason)] });
-
-      await target.timeout(null).catch(() => {
-        return message.reply({ embeds: [failEmbed("I cannot unmute this user.")] });
-      });
+    if (cmd === "unmute") {
+      await target.timeout(null);
 
       return message.reply({
         embeds: [
@@ -228,8 +181,95 @@ module.exports = {
     }
 
     // =========================
-    // WARN
+    // LOCK
     // =========================
+    if (cmd === "lock") {
+      if (!message.member.permissions.has("ManageChannels"))
+        return message.reply({ embeds: [permissionEmbed()] });
+
+      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
+        SendMessages: false
+      });
+
+      return message.reply({ embeds: [successEmbed("Channel locked.")] });
+    }
+
+    // =========================
+    // UNLOCK
+    // =========================
+    if (cmd === "unlock") {
+      if (!message.member.permissions.has("ManageChannels"))
+        return message.reply({ embeds: [permissionEmbed()] });
+
+      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
+        SendMessages: true
+      });
+
+      return message.reply({ embeds: [successEmbed("Channel unlocked.")] });
+    }
+
+    // =========================
+    // HIDE / UNHIDE
+    // =========================
+    if (cmd === "hide") {
+      if (!message.member.permissions.has("ManageChannels"))
+        return message.reply({ embeds: [permissionEmbed()] });
+
+      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
+        ViewChannel: false
+      });
+
+      return message.reply({ embeds: [successEmbed("Channel hidden.")] });
+    }
+
+    if (cmd === "unhide") {
+      if (!message.member.permissions.has("ManageChannels"))
+        return message.reply({ embeds: [permissionEmbed()] });
+
+      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
+        ViewChannel: true
+      });
+
+      return message.reply({ embeds: [successEmbed("Channel visible.")] });
+    }
+
+    // =========================
+    // PURGE
+    // =========================
+    if (cmd === "purge") {
+      if (!message.member.permissions.has("ManageMessages"))
+        return message.reply({ embeds: [permissionEmbed()] });
+
+      const amount = parseInt(args[1]);
+      if (!amount || amount < 1 || amount > 100)
+        return message.reply({ embeds: [failEmbed("1–100 messages only.")] });
+
+      await message.channel.bulkDelete(amount, true);
+
+      return message.reply({
+        embeds: [successEmbed(`${amount} messages cleared.`)]
+      });
+    }
+  }
+};
+
+// helper
+function convertTime(str) {
+  if (!str) return null;
+
+  const match = str.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) return null;
+
+  const num = parseInt(match[1]);
+  const unit = match[2];
+
+  return {
+    s: 1000,
+    m: 60000,
+    h: 3600000,
+    d: 86400000
+  }[unit] * num;
+}// =========================
     if (cmd === "warn" || cmd === "w") {
       const target = resolveMention(message);
       if (!target) return message.reply({ embeds: [failEmbed("Mention a user.")] });
