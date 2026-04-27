@@ -3,13 +3,21 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('fs');
 
+// load welcome event
+const setupWelcome = require('./events/welcome');
+
+// prefix
 const PREFIX = ",";
+
+// welcome channel ID
+const WELCOME_CHANNEL_ID = '1478295508593283123';
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
   ]
 });
 
@@ -23,21 +31,33 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
+// start welcome system
+setupWelcome(client, WELCOME_CHANNEL_ID);
+
 client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-// when someone types ,something
+// prefix handler
 client.on('messageCreate', message => {
   if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
-  const args = message.content.slice(PREFIX.length).split(" ");
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const commandName = args.shift().toLowerCase();
 
   const command = client.commands.get(commandName);
   if (!command) return;
 
-  command.execute(message, args);
+  try {
+    command.execute(message, args);
+  } catch (err) {
+    console.error(err);
+    message.reply('❌ Error running command');
+  }
 });
 
 client.login(process.env.TOKEN);
+
+// safety
+process.on('unhandledRejection', console.error);
+process.on('uncaughtException', console.error);
