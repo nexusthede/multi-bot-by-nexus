@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
+const hierarchy = require("../hierarchy");
 
 // =========================
 // CONFIG
@@ -35,14 +36,27 @@ function getTarget(message) {
 }
 
 // =========================
+// EMBED
+// =========================
+function logEmbed(title, target, moderator, color) {
+  return new EmbedBuilder()
+    .setColor(color)
+    .setDescription(
+      `${title}\n\n👤 Target: ${target.user.tag}\n🛡 Moderator: ${moderator.tag}`
+    )
+    .setTimestamp();
+}
+
+// =========================
 // COMMAND
 // =========================
 module.exports = {
   name: "jail",
 
   async execute(message, args) {
-    const sub = args[0]?.toLowerCase();
+    if (!message.guild || message.author.bot) return;
 
+    const sub = args[0]?.toLowerCase();
     const target = getTarget(message);
 
     const jailRole = message.guild.roles.cache.get(CONFIG.roles.jail);
@@ -52,71 +66,69 @@ module.exports = {
     // PERMISSION CHECK
     // =========================
     if (!isAuthorized(message.member)) {
-      return message.reply("You don’t have permission to use this command.");
+      return message.reply("❌ You don’t have permission to use this command.");
     }
 
     // =========================
-    // NO TARGET
+    // TARGET CHECK
     // =========================
     if (!target) {
-      return message.reply("Mention a user.");
+      return message.reply("❌ Mention a user.");
     }
 
-    // =========================
-    // SELF PROTECTION
-    // =========================
     if (target.id === message.author.id) {
-      return message.reply("You cannot use this on yourself.");
+      return message.reply("❌ You cannot use this on yourself.");
     }
 
-    // =========================
-    // BOT PROTECTION (optional safety)
-    // =========================
     if (target.user.bot) {
-      return message.reply("You cannot use this on bots.");
+      return message.reply("❌ You cannot use this on bots.");
     }
 
     // =========================
-    // JAIL COMMAND
+    // JAIL
     // =========================
     if (!sub || sub === "add") {
-      if (!jailRole) return message.reply("Jail role not set.");
+      if (!jailRole) return message.reply("❌ Jail role not set.");
 
       await target.roles.add(jailRole).catch(() => {
-        return message.reply("I cannot jail this user.");
+        return message.reply("❌ I cannot jail this user.");
       });
 
       if (logChannel) {
-        logChannel.send(
-          `🚫 ${target.user.tag} was jailed by ${message.author.tag}`
-        );
+        logChannel.send({
+          embeds: [
+            logEmbed("🚫 USER JAILED", target, message.author, 0xE74C3C)
+          ]
+        }).catch(() => {});
       }
 
-      return message.reply(`${target.user.tag} has been jailed.`);
+      return message.reply(`🚫 ${target.user.tag} has been jailed.`);
     }
 
     // =========================
-    // UNJAIL COMMAND
+    // UNJAIL
     // =========================
     if (sub === "remove" || sub === "unjail") {
-      if (!jailRole) return message.reply("Jail role not set.");
+      if (!jailRole) return message.reply("❌ Jail role not set.");
 
       await target.roles.remove(jailRole).catch(() => {
-        return message.reply("I cannot unjail this user.");
+        return message.reply("❌ I cannot unjail this user.");
       });
 
       if (logChannel) {
-        logChannel.send(
-          `✅ ${target.user.tag} was unjailed by ${message.author.tag}`
-        );
+        logChannel.send({
+          embeds: [
+            logEmbed("✅ USER UNJAILED", target, message.author, 0x2ECC71)
+          ]
+        }).catch(() => {});
       }
 
-      return message.reply(`${target.user.tag} has been unjailed.`);
+      return message.reply(`✅ ${target.user.tag} has been unjailed.`);
     }
 
     // =========================
-    // INVALID SUBCOMMAND
+    // INVALID
     // =========================
-    return message.reply("Use: .jail @user OR .jail unjail @user");
+    return message.reply("❌ Use: `.jail @user` or `.jail unjail @user`");
   }
 };
