@@ -1,17 +1,17 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const fs = require('fs');
-const express = require('express');
+const { Client, GatewayIntentBits, Collection } = require("discord.js");
+const fs = require("fs");
+const express = require("express");
 
 // =========================
-// MONGODB (FIXED PATH)
+// MONGODB
 // =========================
-const connectMongo = require('./database/mongo'); // ✅ FIXED
+const connectMongo = require("./database/mongo");
 connectMongo();
 
 // =========================
-// WEB SERVER (RENDER KEEP ALIVE)
+// EXPRESS KEEP ALIVE (RENDER)
 // =========================
 const app = express();
 
@@ -26,26 +26,7 @@ app.listen(PORT, () => {
 });
 
 // =========================
-// LOAD EVENTS
-// =========================
-const setupWelcome = require('./events/welcome');
-
-// =========================
-// CONFIG
-// =========================
-const PREFIX = ".";
-const WELCOME_CHANNEL_ID = '1478295508593283123';
-
-// =========================
-// ENV SAFETY
-// =========================
-if (!process.env.TOKEN) {
-  console.log("❌ Missing TOKEN in environment variables");
-  process.exit(1);
-}
-
-// =========================
-// CLIENT
+// CLIENT (BIG SERVER SAFE)
 // =========================
 const client = new Client({
   intents: [
@@ -59,47 +40,80 @@ const client = new Client({
 client.commands = new Collection();
 
 // =========================
-// LOAD COMMANDS
+// LOAD COMMANDS (SAFE)
 // =========================
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
 
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  client.commands.set(command.name, command);
+  try {
+    const command = require(`./commands/${file}`);
+    if (command?.name && command?.execute) {
+      client.commands.set(command.name, command);
+      console.log(`Loaded: ${command.name}`);
+    } else {
+      console.log(`Skipped invalid command: ${file}`);
+    }
+  } catch (err) {
+    console.error(`Error loading ${file}:`, err);
+  }
 }
 
 // =========================
-// WELCOME SYSTEM
+// WELCOME SYSTEM (KEPT SAFE)
 // =========================
+const setupWelcome = require("./events/welcome");
+const WELCOME_CHANNEL_ID = "1478295508593283123";
+
 setupWelcome(client, WELCOME_CHANNEL_ID);
 
 // =========================
-// READY EVENT
+// READY
 // =========================
-client.on('ready', () => {
+client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 // =========================
+// COOLDOWN SYSTEM (BIG SERVER SAFE)
+// =========================
+const cooldown = new Map();
+
+// =========================
 // MESSAGE HANDLER
 // =========================
-client.on('messageCreate', message => {
+client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
-  if (!message.content.startsWith(PREFIX)) return;
+  if (!message.content.startsWith(".")) return;
 
-  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-
+  const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift()?.toLowerCase();
   if (!commandName) return;
 
   const command = client.commands.get(commandName);
   if (!command) return;
 
+  // =========================
+  // GLOBAL COOLDOWN
+  // =========================
+  const key = `${message.author.id}-${commandName}`;
+  const now = Date.now();
+
+  if (cooldown.has(key)) {
+    const expire = cooldown.get(key);
+    if (now < expire) return;
+  }
+
+  cooldown.set(key, now + 1500);
+  setTimeout(() => cooldown.delete(key), 1500);
+
+  // =========================
+  // EXECUTE COMMAND
+  // =========================
   try {
-    command.execute(message, args);
+    await command.execute(message, args, client);
   } catch (err) {
-    console.error(err);
-    message.reply("❌ Error running command");
+    console.error(`Command error [${commandName}]:`, err);
+    message.reply("❌ Something went wrong.");
   }
 });
 
@@ -111,7 +125,7 @@ client.login(process.env.TOKEN).catch(err => {
 });
 
 // =========================
-// SAFETY
+// SAFETY NET
 // =========================
-process.on('unhandledRejection', console.error);
-process.on('uncaughtException', console.error);
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
