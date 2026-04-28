@@ -12,9 +12,6 @@ const CONFIG = {
   }
 };
 
-// =========================
-// AUTH
-// =========================
 function isAuthorized(member) {
   return (
     CONFIG.roles.owner.some(id => member.roles.cache.has(id)) ||
@@ -22,9 +19,6 @@ function isAuthorized(member) {
   );
 }
 
-// =========================
-// EMBED
-// =========================
 function logEmbed(title, target, moderator, color) {
   return new EmbedBuilder()
     .setColor(color)
@@ -34,11 +28,9 @@ function logEmbed(title, target, moderator, color) {
     .setTimestamp();
 }
 
-// =========================
-// COMMAND
-// =========================
 module.exports = {
   name: "jail",
+  aliases: ["j", "unjail"],
 
   async execute(message, args) {
     if (!message.guild || message.author.bot) return;
@@ -49,66 +41,42 @@ module.exports = {
     const jailRole = message.guild.roles.cache.get(CONFIG.roles.jail);
     const logChannel = message.guild.channels.cache.get(CONFIG.channels.logs);
 
-    // =========================
-    // PERMISSION
-    // =========================
     if (!isAuthorized(message.member)) {
       return message.reply("❌ No permission.");
     }
 
-    // =========================
-    // TARGET
-    // =========================
-    if (!target) {
-      return message.reply("❌ Mention a user.");
-    }
+    if (!target) return message.reply("❌ Mention a user.");
 
     if (target.id === message.author.id) {
       return message.reply("❌ You cannot use this on yourself.");
     }
 
-    if (target.user.bot) {
-      return message.reply("❌ You cannot use this on bots.");
-    }
+    if (!jailRole) return message.reply("❌ Jail role not found.");
 
-    if (!jailRole) {
-      return message.reply("❌ Jail role not set.");
-    }
-
-    // =========================
-    // UNJAIL
-    // =========================
     if (sub === "unjail" || sub === "remove") {
       await target.roles.remove(jailRole).catch(() => {
-        return message.reply("❌ I cannot unjail this user.");
+        return message.reply("❌ Cannot unjail user.");
       });
 
       if (logChannel) {
         logChannel.send({
-          embeds: [
-            logEmbed("✅ USER UNJAILED", target, message.author, 0x2ECC71)
-          ]
+          embeds: [logEmbed("UNJAILED", target, message.author, 0x2ECC71)]
         }).catch(() => {});
       }
 
-      return message.reply(`✅ ${target.user.tag} has been unjailed.`);
+      return message.reply(`✅ ${target.user.tag} unjailed.`);
     }
 
-    // =========================
-    // JAIL (DEFAULT)
-    // =========================
     await target.roles.add(jailRole).catch(() => {
-      return message.reply("❌ I cannot jail this user.");
+      return message.reply("❌ Cannot jail user.");
     });
 
     if (logChannel) {
       logChannel.send({
-        embeds: [
-          logEmbed("🚫 USER JAILED", target, message.author, 0xE74C3C)
-        ]
+        embeds: [logEmbed("JAILED", target, message.author, 0xE74C3C)]
       }).catch(() => {});
     }
 
-    return message.reply(`🚫 ${target.user.tag} has been jailed.`);
+    return message.reply(`🚫 ${target.user.tag} jailed.`);
   }
 };
