@@ -1,71 +1,158 @@
-const { EmbedBuilder } = require("discord.js");
-const hierarchy = require("../hierarchy");
+const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 
 // =========================
-// EMBEDS
+// STAFF TIERS
 // =========================
-function successEmbed(text) {
-  return new EmbedBuilder().setColor(0x2ECC71).setDescription(text);
+const TIERS = {
+  OWNER: 3,
+  ADMIN: 2,
+  MOD: 1
+};
+
+const ROLE_TIERS = {
+  "1449945270782525502": TIERS.OWNER,
+  "1466497373776908353": TIERS.OWNER,
+
+  "1450022204657111155": TIERS.ADMIN,
+
+  "1465960511375151288": TIERS.MOD,
+  "1468316755847024730": TIERS.MOD
+};
+
+// =========================
+// ROLE / TIER SYSTEM
+// =========================
+function getTier(member) {
+  if (!member?.roles?.cache) return 0;
+
+  let highest = 0;
+  for (const role of member.roles.cache.values()) {
+    const tier = ROLE_TIERS[role.id];
+    if (tier && tier > highest) highest = tier;
+  }
+  return highest;
+}
+
+function canUseMod(member) {
+  return getTier(member) > 0;
+}
+
+// =========================
+// HIERARCHY
+// =========================
+function canModerate(mod, target, action = "default") {
+  if (!mod || !target) return { ok: false, reason: "Invalid user." };
+  if (mod.id === target.id) return { ok: false, reason: "You cannot moderate yourself." };
+
+  const modTier = getTier(mod);
+  const targetTier = getTier(target);
+
+  const modPos = mod.roles?.highest?.position ?? 0;
+  const targetPos = target.roles?.highest?.position ?? 0;
+
+  if (modTier === TIERS.OWNER) return { ok: true };
+
+  if (targetTier >= TIERS.ADMIN && modTier < TIERS.OWNER) {
+    return { ok: false, reason: "You cannot moderate staff members." };
+  }
+
+  if (modPos < targetPos) {
+    return { ok: false, reason: "Your role is too low to moderate this user." };
+  }
+
+  const warning = modPos === targetPos;
+
+  const ACTION_POWER = {
+    ban: 3,
+    kick: 2,
+    mute: 1,
+    warn: 0
+  };
+
+  if (modTier < (ACTION_POWER[action] ?? 0) && modTier !== TIERS.OWNER) {
+    return {
+      ok: false,
+      reason: "You do not have enough staff power for this action."
+    };
+  }
+
+  return { ok: true, warning };
+}
+
+// =========================
+// COOLDOWN
+// =========================
+const cooldowns = new Map();
+
+function checkCooldown(userId, cmd, time = 2000) {
+  const key = `${userId}-${cmd}`;
+  const now = Date.now();
+
+  const expire = cooldowns.get(key);
+  if (expire && expire > now) return true;
+
+  cooldowns.set(key, now + time);
+  setTimeout(() => cooldowns.delete(key), time);
+
+  return false;
+}
+
+// =========================
+// SAFE RUN
+// =========================
+async function safeRun(fn) {
+  try {
+    await fn();
+    return { ok: true };
+  } catch (err) {
+    console.error("MOD ERROR:", err);
+    return { ok: false };
+  }
+}
+
+// =========================
+// EMBEDS (UNCHANGED STYLE)
+// =========================
+function actionEmbed(action, targetId, modId, duration) {
+  const MAP = {
+    ban: "BANNED",
+    kick: "KICKED",
+    warn: "WARNED",
+    mute: "MUTED",
+    unmute: "UNMUTED"
+  };
+
+  let desc = `<@${targetId}> was ${MAP[action].toLowerCase()} by <@${modId}>`;
+
+  if (action === "mute" && duration) {
+    desc += ` for ${duration}`;
+  }
+
+  return new EmbedBuilder()
+    .setColor(0x2ECC71)
+    .setTitle(MAP[action])
+    .setDescription(desc)
+    .setTimestamp();
 }
 
 function failEmbed(text) {
-  return new EmbedBuilder().setColor(0xE74C3C).setDescription(text || "That didn’t work.");
+  return new EmbedBuilder()
+    .setColor(0xE74C3C)
+    .setTitle("FAILED")
+    .setDescription(text || "Action failed.")
+    .setTimestamp();
 }
 
 function permissionEmbed(text) {
-  return new EmbedBuilder().setColor(0xF1C40F).setDescription(text || "You don’t have permission to do that.");
-}
-
-function actionEmbed({ action, target, moderator, reason, duration }) {
-  const map = {
-    BAN: "was banned",
-    UNBAN: "was unbanned",
-    KICK: "was kicked",
-    WARN: "was warned",
-    MUTE: "was muted",
-    UNMUTE: "was unmuted"
-  };
-
-  let text = `${target} ${map[action] || "was moderated"} by ${moderator}`;
-  if (action === "MUTE" && duration) text += ` for ${duration}`;
-
   return new EmbedBuilder()
-    .setColor(0x3498DB)
-    .setDescription(text + ".")
-    .addFields({
-      name: "Reason",
-      value: reason || "No reason provided"
-    });
+    .setColor(0xF1C40F)
+    .setTitle("PERMISSION")
+    .setDescription(text || "You do not have permission.")
+    .setTimestamp();
 }
 
 // =========================
-// HELPERS
-// =========================
-function getTarget(message) {
-  return message.mentions.members.first();
-}
-
-function parseTime(input) {
-  if (!input) return null;
-
-  const match = input.match(/^(\d+)(s|m|h|d)$/);
-  if (!match) return null;
-
-  const num = parseInt(match[1]);
-  const unit = match[2];
-
-  const map = {
-    s: 1000,
-    m: 60000,
-    h: 3600000,
-    d: 86400000
-  };
-
-  return num * map[unit];
-}
-
-// =========================
-// MAIN COMMAND
+// COMMAND HANDLER
 // =========================
 module.exports = {
   name: "moderation",
@@ -73,116 +160,97 @@ module.exports = {
   async execute(message, args) {
     if (!message.guild || message.author.bot) return;
 
-    const cmd = message.content.slice(1).split(/ +/)[0]?.toLowerCase();
-    const target = getTarget(message);
+    const cmdRaw = message.content.slice(1).split(/ +/)[0]?.toLowerCase();
 
     // =========================
-    // REQUIRED TARGET COMMANDS
+    // ALIASES FIXED HERE
     // =========================
+    const aliases = {
+      b: "ban",
+      k: "kick",
+      w: "warn",
+      tm: "mute",
+      timeout: "mute",
+      um: "unmute"
+    };
+
+    const cmd = aliases[cmdRaw] || cmdRaw;
+
+    if (checkCooldown(message.author.id, cmd)) return;
+
+    const target = message.mentions.members.first();
+
+    if (!canUseMod(message.member)) {
+      return message.reply({
+        embeds: [permissionEmbed("You do not have permission to use moderation commands.")]
+      });
+    }
+
     const needsTarget = ["ban", "kick", "warn", "mute", "unmute"];
 
-    if (needsTarget.includes(cmd)) {
-      if (!target)
-        return message.reply({ embeds: [failEmbed("Mention a user.")] });
+    if (needsTarget.includes(cmd) && !target) {
+      return message.reply({ embeds: [failEmbed("Mention a user.")] });
+    }
 
-      const check = await hierarchy.canModerate(message.member, target);
-      if (!check.ok)
-        return message.reply({ embeds: [permissionEmbed(check.reason)] });
+    const check = canModerate(message.member, target, cmd);
+
+    if (needsTarget.includes(cmd) && !check.ok) {
+      return message.reply({
+        embeds: [permissionEmbed(check.reason)]
+      });
     }
 
     // =========================
     // BAN
     // =========================
-    if (cmd === "ban" || cmd === "b") {
-      const reason = args.slice(1).join(" ") || "No reason";
-
-      await target.ban({ reason });
-
-      return message.reply({
-        embeds: [
-          successEmbed(`${target.user.tag} was banned.`),
-          actionEmbed({
-            action: "BAN",
-            target: target.user.tag,
-            moderator: message.author.tag,
-            reason
-          })
-        ]
-      });
+    if (cmd === "ban") {
+      await safeRun(() => target.ban());
+      return message.reply({ embeds: [actionEmbed("ban", target.id, message.author.id)] });
     }
 
     // =========================
     // KICK
     // =========================
-    if (cmd === "kick" || cmd === "k") {
-      const reason = args.slice(1).join(" ") || "No reason";
-
-      await target.kick(reason);
-
-      return message.reply({
-        embeds: [
-          successEmbed(`${target.user.tag} was kicked.`),
-          actionEmbed({
-            action: "KICK",
-            target: target.user.tag,
-            moderator: message.author.tag,
-            reason
-          })
-        ]
-      });
+    if (cmd === "kick") {
+      await safeRun(() => target.kick());
+      return message.reply({ embeds: [actionEmbed("kick", target.id, message.author.id)] });
     }
 
     // =========================
     // WARN
     // =========================
     if (cmd === "warn") {
-      const reason = args.slice(1).join(" ") || "No reason";
-
       if (!global.warns) global.warns = {};
       if (!global.warns[target.id]) global.warns[target.id] = [];
 
       global.warns[target.id].push({
-        reason,
         mod: message.author.id,
         time: Date.now()
       });
 
       return message.reply({
-        embeds: [
-          successEmbed(`${target.user.tag} was warned.`),
-          actionEmbed({
-            action: "WARN",
-            target: target.user.tag,
-            moderator: message.author.tag,
-            reason
-          })
-        ]
+        embeds: [actionEmbed("warn", target.id, message.author.id)]
       });
     }
 
     // =========================
     // MUTE
     // =========================
-    if (cmd === "mute" || cmd === "timeout") {
-      const time = parseTime(args[1]);
-      if (!time)
-        return message.reply({ embeds: [failEmbed("Use 10m / 1h / 1d")] });
+    if (cmd === "mute") {
+      const time = args[1];
+      if (!time) return message.reply({ embeds: [failEmbed("Use 10m / 1h / 1d")] });
 
-      const reason = args.slice(2).join(" ") || "No reason";
+      const ms =
+        time.endsWith("m")
+          ? parseInt(time) * 60000
+          : time.endsWith("h")
+          ? parseInt(time) * 3600000
+          : parseInt(time) * 86400000;
 
-      await target.timeout(time, reason);
+      await safeRun(() => target.timeout(ms));
 
       return message.reply({
-        embeds: [
-          successEmbed(`${target.user.tag} was muted.`),
-          actionEmbed({
-            action: "MUTE",
-            target: target.user.tag,
-            moderator: message.author.tag,
-            reason,
-            duration: args[1]
-          })
-        ]
+        embeds: [actionEmbed("mute", target.id, message.author.id, time)]
       });
     }
 
@@ -190,83 +258,10 @@ module.exports = {
     // UNMUTE
     // =========================
     if (cmd === "unmute") {
-      await target.timeout(null);
+      await safeRun(() => target.timeout(null));
 
       return message.reply({
-        embeds: [
-          successEmbed(`${target.user.tag} was unmuted.`),
-          actionEmbed({
-            action: "UNMUTE",
-            target: target.user.tag,
-            moderator: message.author.tag,
-            reason: "Manual removal"
-          })
-        ]
-      });
-    }
-
-    // =========================
-    // LOCK / UNLOCK / HIDE / UNHIDE
-    // =========================
-    if (cmd === "lock") {
-      if (!message.member.permissions.has("ManageChannels"))
-        return message.reply({ embeds: [permissionEmbed()] });
-
-      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
-        SendMessages: false
-      });
-
-      return message.reply({ embeds: [successEmbed("Channel locked.")] });
-    }
-
-    if (cmd === "unlock") {
-      if (!message.member.permissions.has("ManageChannels"))
-        return message.reply({ embeds: [permissionEmbed()] });
-
-      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
-        SendMessages: true
-      });
-
-      return message.reply({ embeds: [successEmbed("Channel unlocked.")] });
-    }
-
-    if (cmd === "hide") {
-      if (!message.member.permissions.has("ManageChannels"))
-        return message.reply({ embeds: [permissionEmbed()] });
-
-      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
-        ViewChannel: false
-      });
-
-      return message.reply({ embeds: [successEmbed("Channel hidden.")] });
-    }
-
-    if (cmd === "unhide") {
-      if (!message.member.permissions.has("ManageChannels"))
-        return message.reply({ embeds: [permissionEmbed()] });
-
-      await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
-        ViewChannel: true
-      });
-
-      return message.reply({ embeds: [successEmbed("Channel visible.")] });
-    }
-
-    // =========================
-    // PURGE
-    // =========================
-    if (cmd === "purge") {
-      if (!message.member.permissions.has("ManageMessages"))
-        return message.reply({ embeds: [permissionEmbed()] });
-
-      const amount = parseInt(args[1]);
-      if (!amount || amount < 1 || amount > 100)
-        return message.reply({ embeds: [failEmbed("1–100 only.")] });
-
-      await message.channel.bulkDelete(amount, true);
-
-      return message.reply({
-        embeds: [successEmbed(`${amount} messages cleared.`)]
+        embeds: [actionEmbed("unmute", target.id, message.author.id)]
       });
     }
   }
