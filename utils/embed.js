@@ -37,36 +37,47 @@ const permissionEmbed = (perm) =>
     .setFooter({ text: getTime() });
 
 // =========================
-// ACTION EMBED (BAN / KICK / MUTE / WARN)
+// ACTION EMBED (BAN / KICK / MUTE / UNMUTE / WARN)
 // =========================
-const actionEmbed = (action, target, mod) =>
-  new EmbedBuilder()
+const actionEmbed = (action, target, mod) => {
+  const verbs = {
+    ban: "banned",
+    kick: "kicked",
+    mute: "muted",
+    unmute: "unmuted",
+    warn: "warned"
+  };
+
+  return new EmbedBuilder()
     .setColor(GARY_COLOR)
     .setTitle(action.toUpperCase())
-    .setDescription(`${target} was ${action}ed by ${mod}`)
+    .setDescription(
+      `${target.user ? target.user.tag : target} was ${verbs[action] || action} by ${mod}`
+    )
     .setFooter({ text: getTime() });
+};
 
 // =========================
-// PURGE EMBED (MESSAGE DELETE SYSTEM)
+// PURGE EMBED
 // =========================
 const purgeEmbed = (amount, mod, channel) =>
   new EmbedBuilder()
     .setColor(GARY_COLOR)
     .setTitle("PURGE")
     .setDescription(
-      `${amount} messages were deleted in ${channel} by ${mod}`
+      `${amount} messages were deleted in #${channel.name} by ${mod}`
     )
     .setFooter({ text: getTime() });
 
 // =========================
-// WARN EMBED (TRACKING SYSTEM)
+// WARN EMBED (MONGODB READY)
 // =========================
 const warnEmbed = (target, mod, reason, warnCount) =>
   new EmbedBuilder()
     .setColor(GARY_COLOR)
     .setTitle("WARN")
     .setDescription(
-      `${target} was warned by ${mod}\nReason: ${reason}`
+      `${target.user ? target.user.tag : target} was warned by ${mod}\nReason: ${reason}`
     )
     .addFields({
       name: "Total Warnings",
@@ -75,6 +86,9 @@ const warnEmbed = (target, mod, reason, warnCount) =>
     })
     .setFooter({ text: getTime() });
 
+// =========================
+// EXPORTS
+// =========================
 module.exports = {
   failEmbed,
   permissionEmbed,
