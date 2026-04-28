@@ -13,7 +13,6 @@ app.get("/", (req, res) => {
   res.send("Bot is alive ✅");
 });
 
-// IMPORTANT: Render requires 0.0.0.0
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
@@ -86,7 +85,7 @@ client.once("ready", () => {
 const cooldown = new Map();
 
 // =========================
-// MESSAGE HANDLER (FIXED + DEBUG)
+// MESSAGE HANDLER (FIXED + ALIASES)
 // =========================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
@@ -97,7 +96,10 @@ client.on("messageCreate", async (message) => {
 
   console.log("➡ Received command:", commandName);
 
-  const command = client.commands.get(commandName);
+  // 🔥 FIX: ALIAS SUPPORT ADDED HERE
+  const command =
+    client.commands.get(commandName) ||
+    client.commands.find(cmd => cmd.aliases?.includes(commandName));
 
   if (!command) {
     console.log("❌ Command not found:", commandName);
