@@ -5,13 +5,13 @@ const fs = require("fs");
 const express = require("express");
 
 // =========================
-// MONGODB
+// MONGO CONNECT
 // =========================
 const connectMongo = require("./database/mongo");
 connectMongo();
 
 // =========================
-// EXPRESS KEEP ALIVE (RENDER)
+// EXPRESS (RENDER KEEP ALIVE)
 // =========================
 const app = express();
 
@@ -26,7 +26,7 @@ app.listen(PORT, () => {
 });
 
 // =========================
-// CLIENT (BIG SERVER SAFE)
+// CLIENT
 // =========================
 const client = new Client({
   intents: [
@@ -40,41 +40,41 @@ const client = new Client({
 client.commands = new Collection();
 
 // =========================
-// LOAD COMMANDS (SAFE)
+// LOAD COMMANDS
 // =========================
-const commandFiles = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
+const commandFiles = fs
+  .readdirSync("./commands")
+  .filter(file => file.endsWith(".js"));
 
 for (const file of commandFiles) {
-  try {
-    const command = require(`./commands/${file}`);
-    if (command?.name && command?.execute) {
-      client.commands.set(command.name, command);
-      console.log(`Loaded: ${command.name}`);
-    } else {
-      console.log(`Skipped invalid command: ${file}`);
-    }
-  } catch (err) {
-    console.error(`Error loading ${file}:`, err);
+  const command = require(`./commands/${file}`);
+
+  if (command?.name && command?.execute) {
+    client.commands.set(command.name, command);
+    console.log(`Loaded: ${command.name}`);
+  } else {
+    console.log(`Skipped invalid command: ${file}`);
   }
 }
 
 // =========================
-// WELCOME SYSTEM (KEPT SAFE)
+// LOAD EVENTS (WELCOME SYSTEM)
 // =========================
 const setupWelcome = require("./events/welcome");
+
 const WELCOME_CHANNEL_ID = "1478295508593283123";
 
 setupWelcome(client, WELCOME_CHANNEL_ID);
 
 // =========================
-// READY
+// READY EVENT
 // =========================
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 // =========================
-// COOLDOWN SYSTEM (BIG SERVER SAFE)
+// COOLDOWN SYSTEM
 // =========================
 const cooldown = new Map();
 
@@ -87,32 +87,22 @@ client.on("messageCreate", async (message) => {
 
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift()?.toLowerCase();
-  if (!commandName) return;
 
   const command = client.commands.get(commandName);
   if (!command) return;
 
-  // =========================
-  // GLOBAL COOLDOWN
-  // =========================
   const key = `${message.author.id}-${commandName}`;
   const now = Date.now();
 
-  if (cooldown.has(key)) {
-    const expire = cooldown.get(key);
-    if (now < expire) return;
-  }
+  if (cooldown.get(key) > now) return;
 
   cooldown.set(key, now + 1500);
   setTimeout(() => cooldown.delete(key), 1500);
 
-  // =========================
-  // EXECUTE COMMAND
-  // =========================
   try {
     await command.execute(message, args, client);
   } catch (err) {
-    console.error(`Command error [${commandName}]:`, err);
+    console.error(`Command error (${commandName}):`, err);
     message.reply("❌ Something went wrong.");
   }
 });
