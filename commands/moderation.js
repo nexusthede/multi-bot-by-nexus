@@ -1,7 +1,7 @@
-const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 // =========================
-// STAFF TIERS
+// STAFF TIER SYSTEM
 // =========================
 const TIERS = {
   OWNER: 3,
@@ -19,9 +19,6 @@ const ROLE_TIERS = {
   "1468316755847024730": TIERS.MOD
 };
 
-// =========================
-// ROLE / TIER SYSTEM
-// =========================
 function getTier(member) {
   if (!member?.roles?.cache) return 0;
 
@@ -56,11 +53,9 @@ function canModerate(mod, target, action = "default") {
     return { ok: false, reason: "You cannot moderate staff members." };
   }
 
-  if (modPos < targetPos) {
+  if (modPos <= targetPos) {
     return { ok: false, reason: "Your role is too low to moderate this user." };
   }
-
-  const warning = modPos === targetPos;
 
   const ACTION_POWER = {
     ban: 3,
@@ -72,11 +67,11 @@ function canModerate(mod, target, action = "default") {
   if (modTier < (ACTION_POWER[action] ?? 0) && modTier !== TIERS.OWNER) {
     return {
       ok: false,
-      reason: "You do not have enough staff power for this action."
+      reason: "You do not have enough permission power."
     };
   }
 
-  return { ok: true, warning };
+  return { ok: true };
 }
 
 // =========================
@@ -103,35 +98,21 @@ function checkCooldown(userId, cmd, time = 2000) {
 async function safeRun(fn) {
   try {
     await fn();
-    return { ok: true };
+    return true;
   } catch (err) {
-    console.error("MOD ERROR:", err);
-    return { ok: false };
+    console.error(err);
+    return false;
   }
 }
 
 // =========================
-// EMBEDS (UNCHANGED STYLE)
+// EMBEDS
 // =========================
-function actionEmbed(action, targetId, modId, duration) {
-  const MAP = {
-    ban: "BANNED",
-    kick: "KICKED",
-    warn: "WARNED",
-    mute: "MUTED",
-    unmute: "UNMUTED"
-  };
-
-  let desc = `<@${targetId}> was ${MAP[action].toLowerCase()} by <@${modId}>`;
-
-  if (action === "mute" && duration) {
-    desc += ` for ${duration}`;
-  }
-
+function successEmbed(text, title = "SUCCESS") {
   return new EmbedBuilder()
     .setColor(0x2ECC71)
-    .setTitle(MAP[action])
-    .setDescription(desc)
+    .setTitle(title)
+    .setDescription(text)
     .setTimestamp();
 }
 
@@ -139,7 +120,7 @@ function failEmbed(text) {
   return new EmbedBuilder()
     .setColor(0xE74C3C)
     .setTitle("FAILED")
-    .setDescription(text || "Action failed.")
+    .setDescription(text)
     .setTimestamp();
 }
 
@@ -147,12 +128,12 @@ function permissionEmbed(text) {
   return new EmbedBuilder()
     .setColor(0xF1C40F)
     .setTitle("PERMISSION")
-    .setDescription(text || "You do not have permission.")
+    .setDescription(text)
     .setTimestamp();
 }
 
 // =========================
-// COMMAND HANDLER
+// COMMAND
 // =========================
 module.exports = {
   name: "moderation",
@@ -160,26 +141,21 @@ module.exports = {
   async execute(message, args) {
     if (!message.guild || message.author.bot) return;
 
-    const cmdRaw = message.content.slice(1).split(/ +/)[0]?.toLowerCase();
-
     // =========================
-    // ALIASES FIXED HERE
+    // CLEAN COMMAND (IMPORTANT FIX)
     // =========================
-    const aliases = {
-      b: "ban",
-      k: "kick",
-      w: "warn",
-      tm: "mute",
-      timeout: "mute",
-      um: "unmute"
-    };
+    const cmd = args[0]?.toLowerCase();
+    if (!cmd) return;
 
-    const cmd = aliases[cmdRaw] || cmdRaw;
+    args.shift();
 
     if (checkCooldown(message.author.id, cmd)) return;
 
     const target = message.mentions.members.first();
 
+    // =========================
+    // BASIC PERMISSION
+    // =========================
     if (!canUseMod(message.member)) {
       return message.reply({
         embeds: [permissionEmbed("You do not have permission to use moderation commands.")]
@@ -203,23 +179,27 @@ module.exports = {
     // =========================
     // BAN
     // =========================
-    if (cmd === "ban") {
+    if (cmd === "ban" || cmd === "b") {
       await safeRun(() => target.ban());
-      return message.reply({ embeds: [actionEmbed("ban", target.id, message.author.id)] });
+      return message.reply({
+        embeds: [successEmbed(`${target.user.tag} was banned by <@${message.author.id}>`, "BAN")]
+      });
     }
 
     // =========================
     // KICK
     // =========================
-    if (cmd === "kick") {
+    if (cmd === "kick" || cmd === "k") {
       await safeRun(() => target.kick());
-      return message.reply({ embeds: [actionEmbed("kick", target.id, message.author.id)] });
+      return message.reply({
+        embeds: [successEmbed(`${target.user.tag} was kicked by <@${message.author.id}>`, "KICK")]
+      });
     }
 
     // =========================
     // WARN
     // =========================
-    if (cmd === "warn") {
+    if (cmd === "warn" || cmd === "w") {
       if (!global.warns) global.warns = {};
       if (!global.warns[target.id]) global.warns[target.id] = [];
 
@@ -229,15 +209,15 @@ module.exports = {
       });
 
       return message.reply({
-        embeds: [actionEmbed("warn", target.id, message.author.id)]
+        embeds: [successEmbed(`${target.user.tag} was warned by <@${message.author.id}>`, "WARN")]
       });
     }
 
     // =========================
     // MUTE
     // =========================
-    if (cmd === "mute") {
-      const time = args[1];
+    if (cmd === "mute" || cmd === "tm" || cmd === "timeout") {
+      const time = args[0];
       if (!time) return message.reply({ embeds: [failEmbed("Use 10m / 1h / 1d")] });
 
       const ms =
@@ -250,18 +230,18 @@ module.exports = {
       await safeRun(() => target.timeout(ms));
 
       return message.reply({
-        embeds: [actionEmbed("mute", target.id, message.author.id, time)]
+        embeds: [successEmbed(`${target.user.tag} was muted by <@${message.author.id}>`, "MUTE")]
       });
     }
 
     // =========================
     // UNMUTE
     // =========================
-    if (cmd === "unmute") {
+    if (cmd === "unmute" || cmd === "um") {
       await safeRun(() => target.timeout(null));
 
       return message.reply({
-        embeds: [actionEmbed("unmute", target.id, message.author.id)]
+        embeds: [successEmbed(`${target.user.tag} was unmuted by <@${message.author.id}>`, "UNMUTE")]
       });
     }
   }
