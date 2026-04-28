@@ -1,4 +1,4 @@
-const Warn = require("../models/Warn");
+const Warn = require("../models/warnmodel");
 const { warnEmbed, failEmbed } = require("../utils/embeds");
 
 module.exports = {
