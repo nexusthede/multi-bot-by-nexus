@@ -12,25 +12,11 @@ const MOD_ROLES = [
   "1468316755847024730"
 ];
 
-const BOT_ROLE_ID = "1450022713346490440";
-
-// =========================
-// PROTECTED ROLES (IMMUNE TARGETS)
-// =========================
-const PROTECTED_ROLES = [
-  ...OWNER_ROLES,
-  ...ADMIN_ROLES,
-  ...MOD_ROLES,
-  BOT_ROLE_ID
-];
-
 // =========================
 // ROLE CHECK
 // =========================
 function hasRole(member, list) {
-  if (!member?.roles?.cache) return false;
-  if (!Array.isArray(list)) return false;
-
+  if (!member?.roles?.cache || !Array.isArray(list)) return false;
   return member.roles.cache.some(role => list.includes(role.id));
 }
 
@@ -42,33 +28,33 @@ async function canModerate(moderator, target) {
     return { ok: false, reason: "Invalid user target." };
   }
 
-  // 👑 OWNER = FULL BYPASS
+  // 👑 OWNER = FULL ACCESS (bypass everything)
   if (hasRole(moderator, OWNER_ROLES)) {
     return { ok: true };
   }
 
-  // 🤖 BOT PROTECTION
-  if (target?.user?.bot || target.roles.cache.has(BOT_ROLE_ID)) {
+  // 🤖 BOT PROTECTION (simple + reliable)
+  if (target.user?.bot) {
     return {
       ok: false,
-      reason: "You cannot perform moderation actions on the bot."
+      reason: "You cannot moderate bots."
     };
   }
 
-  // 🚫 PROTECTED USERS
-  if (hasRole(target, PROTECTED_ROLES)) {
+  // 🚫 OWNER PROTECTION ONLY (don’t over-block staff)
+  if (hasRole(target, OWNER_ROLES)) {
     return {
       ok: false,
-      reason: "This user is protected and cannot be moderated."
+      reason: "This user is protected."
     };
   }
 
-  // 🛡 ADMIN FULL ACCESS
+  // 🛡 ADMIN ACCESS
   if (hasRole(moderator, ADMIN_ROLES)) {
     return { ok: true };
   }
 
-  // 👮 MOD LIMITED ACCESS
+  // 👮 MOD LOGIC (role hierarchy respected)
   if (hasRole(moderator, MOD_ROLES)) {
     if (moderator.roles.highest.position <= target.roles.highest.position) {
       return {
@@ -91,6 +77,5 @@ module.exports = {
   hasRole,
   OWNER_ROLES,
   ADMIN_ROLES,
-  MOD_ROLES,
-  BOT_ROLE_ID
+  MOD_ROLES
 };
