@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require("discord.js");
 
 // =========================
-// STAFF TIER SYSTEM
+// STAFF SYSTEM
 // =========================
 const TIERS = {
   OWNER: 3,
@@ -12,9 +12,7 @@ const TIERS = {
 const ROLE_TIERS = {
   "1449945270782525502": TIERS.OWNER,
   "1466497373776908353": TIERS.OWNER,
-
   "1450022204657111155": TIERS.ADMIN,
-
   "1465960511375151288": TIERS.MOD,
   "1468316755847024730": TIERS.MOD
 };
@@ -35,9 +33,9 @@ function canUseMod(member) {
 }
 
 // =========================
-// HIERARCHY
+// HIERARCHY CHECK
 // =========================
-function canModerate(mod, target, action = "default") {
+function canModerate(mod, target) {
   if (!mod || !target) return { ok: false, reason: "Invalid user." };
   if (mod.id === target.id) return { ok: false, reason: "You cannot moderate yourself." };
 
@@ -54,125 +52,94 @@ function canModerate(mod, target, action = "default") {
   }
 
   if (modPos <= targetPos) {
-    return { ok: false, reason: "Your role is too low to moderate this user." };
-  }
-
-  const ACTION_POWER = {
-    ban: 3,
-    kick: 2,
-    mute: 1,
-    warn: 0
-  };
-
-  if (modTier < (ACTION_POWER[action] ?? 0) && modTier !== TIERS.OWNER) {
-    return {
-      ok: false,
-      reason: "You do not have enough permission power."
-    };
+    return { ok: false, reason: "Your role is too low." };
   }
 
   return { ok: true };
 }
 
 // =========================
-// COOLDOWN
+// COOLDOWN (BIG SERVER SAFE)
 // =========================
 const cooldowns = new Map();
 
-function checkCooldown(userId, cmd, time = 2000) {
+function checkCooldown(userId, cmd) {
   const key = `${userId}-${cmd}`;
   const now = Date.now();
 
   const expire = cooldowns.get(key);
   if (expire && expire > now) return true;
 
-  cooldowns.set(key, now + time);
-  setTimeout(() => cooldowns.delete(key), time);
+  cooldowns.set(key, now + 2000);
+  setTimeout(() => cooldowns.delete(key), 2000);
 
   return false;
 }
 
 // =========================
-// SAFE RUN
+// EMBEDS (CONSISTENT)
 // =========================
-async function safeRun(fn) {
-  try {
-    await fn();
-    return true;
-  } catch (err) {
-    console.error(err);
-    return false;
-  }
-}
-
-// =========================
-// EMBEDS
-// =========================
-function successEmbed(text, title = "SUCCESS") {
+function success(title, desc) {
   return new EmbedBuilder()
     .setColor(0x2ECC71)
-    .setTitle(title)
-    .setDescription(text)
+    .setTitle(`SUCCESS - ${title}`)
+    .setDescription(desc)
     .setTimestamp();
 }
 
-function failEmbed(text) {
+function fail(desc) {
   return new EmbedBuilder()
     .setColor(0xE74C3C)
     .setTitle("FAILED")
-    .setDescription(text)
+    .setDescription(desc)
     .setTimestamp();
 }
 
-function permissionEmbed(text) {
+function perm(desc) {
   return new EmbedBuilder()
     .setColor(0xF1C40F)
     .setTitle("PERMISSION")
-    .setDescription(text)
+    .setDescription(desc)
     .setTimestamp();
 }
 
 // =========================
-// COMMAND
+// MESSAGE CREATE MODERATION
 // =========================
-module.exports = {
-  name: "moderation",
-
-  async execute(message, args) {
+module.exports = (client) => {
+  client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
+    if (!message.content.startsWith(".")) return;
 
-    // =========================
-    // CLEAN COMMAND (IMPORTANT FIX)
-    // =========================
-    const cmd = args[0]?.toLowerCase();
+    const args = message.content.slice(1).trim().split(/ +/);
+    const cmd = args.shift()?.toLowerCase();
     if (!cmd) return;
-
-    args.shift();
-
-    if (checkCooldown(message.author.id, cmd)) return;
 
     const target = message.mentions.members.first();
 
-    // =========================
-    // BASIC PERMISSION
-    // =========================
+    const commands = ["ban", "kick", "warn", "mute", "unmute", "b", "k", "w"];
+
+    if (!commands.includes(cmd)) return;
+
+    if (checkCooldown(message.author.id, cmd)) return;
+
     if (!canUseMod(message.member)) {
       return message.reply({
-        embeds: [permissionEmbed("You do not have permission to use moderation commands.")]
+        embeds: [perm("You lack moderation permission.")]
       });
     }
 
-    const needsTarget = ["ban", "kick", "warn", "mute", "unmute"];
-
-    if (needsTarget.includes(cmd) && !target) {
-      return message.reply({ embeds: [failEmbed("Mention a user.")] });
+    if (!target) {
+      return message.reply({
+        embeds: [fail("You must mention a user.")]
+      });
     }
 
-    const check = canModerate(message.member, target, cmd);
+    const check = canModerate(message.member, target);
 
-    if (needsTarget.includes(cmd) && !check.ok) {
+    if (!check.ok) {
       return message.reply({
-        embeds: [permissionEmbed(check.reason)]
+        embeds: [perm(check.reason)]
       });
     }
 
@@ -180,9 +147,14 @@ module.exports = {
     // BAN
     // =========================
     if (cmd === "ban" || cmd === "b") {
-      await safeRun(() => target.ban());
+      await target.ban().catch(() => {});
       return message.reply({
-        embeds: [successEmbed(`${target.user.tag} was banned by <@${message.author.id}>`, "BAN")]
+        embeds: [
+          success(
+            "BAN",
+            `${target} was banned by <@${message.author.id}>`
+          )
+        ]
       });
     }
 
@@ -190,35 +162,46 @@ module.exports = {
     // KICK
     // =========================
     if (cmd === "kick" || cmd === "k") {
-      await safeRun(() => target.kick());
+      await target.kick().catch(() => {});
       return message.reply({
-        embeds: [successEmbed(`${target.user.tag} was kicked by <@${message.author.id}>`, "KICK")]
+        embeds: [
+          success(
+            "KICK",
+            `${target} was kicked by <@${message.author.id}>`
+          )
+        ]
       });
     }
 
     // =========================
-    // WARN
+    // WARN (MEMORY ONLY)
     // =========================
     if (cmd === "warn" || cmd === "w") {
-      if (!global.warns) global.warns = {};
-      if (!global.warns[target.id]) global.warns[target.id] = [];
+      if (!message.guild.warns) message.guild.warns = {};
+      if (!message.guild.warns[target.id]) message.guild.warns[target.id] = [];
 
-      global.warns[target.id].push({
+      message.guild.warns[target.id].push({
         mod: message.author.id,
+        reason: args.join(" ") || "No reason",
         time: Date.now()
       });
 
       return message.reply({
-        embeds: [successEmbed(`${target.user.tag} was warned by <@${message.author.id}>`, "WARN")]
+        embeds: [
+          success(
+            "WARN",
+            `${target} was warned by <@${message.author.id}>`
+          )
+        ]
       });
     }
 
     // =========================
     // MUTE
     // =========================
-    if (cmd === "mute" || cmd === "tm" || cmd === "timeout") {
+    if (cmd === "mute") {
       const time = args[0];
-      if (!time) return message.reply({ embeds: [failEmbed("Use 10m / 1h / 1d")] });
+      if (!time) return message.reply({ embeds: [fail("Use 10m / 1h / 1d")] });
 
       const ms =
         time.endsWith("m")
@@ -227,22 +210,32 @@ module.exports = {
           ? parseInt(time) * 3600000
           : parseInt(time) * 86400000;
 
-      await safeRun(() => target.timeout(ms));
+      await target.timeout(ms).catch(() => {});
 
       return message.reply({
-        embeds: [successEmbed(`${target.user.tag} was muted by <@${message.author.id}>`, "MUTE")]
+        embeds: [
+          success(
+            "MUTE",
+            `${target} was muted by <@${message.author.id}>`
+          )
+        ]
       });
     }
 
     // =========================
     // UNMUTE
     // =========================
-    if (cmd === "unmute" || cmd === "um") {
-      await safeRun(() => target.timeout(null));
+    if (cmd === "unmute") {
+      await target.timeout(null).catch(() => {});
 
       return message.reply({
-        embeds: [successEmbed(`${target.user.tag} was unmuted by <@${message.author.id}>`, "UNMUTE")]
+        embeds: [
+          success(
+            "UNMUTE",
+            `${target} was unmuted by <@${message.author.id}>`
+          )
+        ]
       });
     }
-  }
+  });
 };
