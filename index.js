@@ -5,13 +5,7 @@ const fs = require("fs");
 const express = require("express");
 
 // =========================
-// MONGO CONNECT
-// =========================
-const connectMongo = require("./database/mongo");
-connectMongo();
-
-// =========================
-// EXPRESS (RENDER KEEP ALIVE)
+// EXPRESS (RENDER KEEP ALIVE + FIXED PORT)
 // =========================
 const app = express();
 
@@ -19,11 +13,18 @@ app.get("/", (req, res) => {
   res.send("Bot is alive ✅");
 });
 
+// IMPORTANT: Render requires 0.0.0.0
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🌐 Web server running on port ${PORT}`);
 });
+
+// =========================
+// MONGO CONNECT
+// =========================
+const connectMongo = require("./database/mongo");
+connectMongo();
 
 // =========================
 // CLIENT
@@ -40,28 +41,34 @@ const client = new Client({
 client.commands = new Collection();
 
 // =========================
-// LOAD COMMANDS
+// LOAD COMMANDS (SAFE + DEBUG)
 // =========================
-const commandFiles = fs
-  .readdirSync("./commands")
-  .filter(file => file.endsWith(".js"));
+const commandFiles = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
+
+console.log("📦 Loading commands...");
 
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
+  try {
+    const command = require(`./commands/${file}`);
 
-  if (command?.name && command?.execute) {
-    client.commands.set(command.name, command);
-    console.log(`Loaded: ${command.name}`);
-  } else {
-    console.log(`Skipped invalid command: ${file}`);
+    if (!command?.name || !command?.execute) {
+      console.log(`❌ Invalid command file: ${file}`);
+      continue;
+    }
+
+    client.commands.set(command.name.toLowerCase(), command);
+    console.log(`✅ Loaded: ${command.name}`);
+  } catch (err) {
+    console.error(`❌ Error loading ${file}:`, err);
   }
 }
 
+console.log(`📊 Total commands: ${client.commands.size}`);
+
 // =========================
-// LOAD EVENTS (WELCOME SYSTEM)
+// WELCOME SYSTEM
 // =========================
 const setupWelcome = require("./events/welcome");
-
 const WELCOME_CHANNEL_ID = "1478295508593283123";
 
 setupWelcome(client, WELCOME_CHANNEL_ID);
@@ -74,12 +81,12 @@ client.once("ready", () => {
 });
 
 // =========================
-// COOLDOWN SYSTEM
+// COOLDOWN
 // =========================
 const cooldown = new Map();
 
 // =========================
-// MESSAGE HANDLER
+// MESSAGE HANDLER (FIXED + DEBUG)
 // =========================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
@@ -88,8 +95,14 @@ client.on("messageCreate", async (message) => {
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift()?.toLowerCase();
 
+  console.log("➡ Received command:", commandName);
+
   const command = client.commands.get(commandName);
-  if (!command) return;
+
+  if (!command) {
+    console.log("❌ Command not found:", commandName);
+    return;
+  }
 
   const key = `${message.author.id}-${commandName}`;
   const now = Date.now();
@@ -102,7 +115,7 @@ client.on("messageCreate", async (message) => {
   try {
     await command.execute(message, args, client);
   } catch (err) {
-    console.error(`Command error (${commandName}):`, err);
+    console.error(`❌ Command error (${commandName}):`, err);
     message.reply("❌ Something went wrong.");
   }
 });
@@ -115,7 +128,7 @@ client.login(process.env.TOKEN).catch(err => {
 });
 
 // =========================
-// SAFETY NET
+// SAFETY
 // =========================
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
