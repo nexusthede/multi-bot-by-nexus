@@ -2,10 +2,11 @@ require("dotenv").config();
 
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const fs = require("fs");
+const path = require("path");
 const express = require("express");
 
 // =========================
-// EXPRESS (RENDER KEEP ALIVE + FIXED PORT)
+// EXPRESS
 // =========================
 const app = express();
 
@@ -20,7 +21,7 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 
 // =========================
-// MONGO CONNECT
+// MONGO
 // =========================
 const connectMongo = require("./database/mongo");
 connectMongo();
@@ -40,29 +41,32 @@ const client = new Client({
 client.commands = new Collection();
 
 // =========================
-// LOAD COMMANDS (SAFE + DEBUG)
+// LOAD COMMANDS (FIXED)
 // =========================
-const commandFiles = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
+const commandPath = path.join(__dirname, "commands");
+const commandFiles = fs.readdirSync(commandPath).filter(f => f.endsWith(".js"));
 
 console.log("📦 Loading commands...");
 
 for (const file of commandFiles) {
   try {
-    const command = require(`./commands/${file}`);
+    const command = require(path.join(commandPath, file));
 
     if (!command?.name || !command?.execute) {
-      console.log(`❌ Invalid command file: ${file}`);
+      console.log(`❌ Invalid command: ${file}`);
       continue;
     }
 
     client.commands.set(command.name.toLowerCase(), command);
     console.log(`✅ Loaded: ${command.name}`);
+
   } catch (err) {
-    console.error(`❌ Error loading ${file}:`, err);
+    console.error(`❌ Error loading ${file}:`, err.message);
   }
 }
 
 console.log(`📊 Total commands: ${client.commands.size}`);
+console.log(`📌 Commands:`, [...client.commands.keys()]);
 
 // =========================
 // WELCOME SYSTEM
@@ -73,7 +77,7 @@ const WELCOME_CHANNEL_ID = "1478295508593283123";
 setupWelcome(client, WELCOME_CHANNEL_ID);
 
 // =========================
-// READY EVENT
+// READY
 // =========================
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -94,12 +98,18 @@ client.on("messageCreate", async (message) => {
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift()?.toLowerCase();
 
-  console.log("➡ Received command:", commandName);
+  console.log("➡ Command:", commandName);
 
-  // 🔥 FIX: ALIAS SUPPORT ADDED HERE
-  const command =
-    client.commands.get(commandName) ||
-    client.commands.find(cmd => cmd.aliases?.includes(commandName));
+  // MAIN COMMAND
+  let command = client.commands.get(commandName);
+
+  // ALIAS SUPPORT
+  if (!command) {
+    command = client.commands.find(cmd =>
+      Array.isArray(cmd.aliases) &&
+      cmd.aliases.map(a => a.toLowerCase()).includes(commandName)
+    );
+  }
 
   if (!command) {
     console.log("❌ Command not found:", commandName);
