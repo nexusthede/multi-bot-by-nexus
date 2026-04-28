@@ -33,38 +33,29 @@ function canUseMod(member) {
 }
 
 // =========================
-// HIERARCHY CHECK
+// HIERARCHY
 // =========================
 function canModerate(mod, target) {
-  if (!mod || !target) return { ok: false, reason: "Invalid user." };
-  if (mod.id === target.id) return { ok: false, reason: "You cannot moderate yourself." };
-
-  const modTier = getTier(mod);
-  const targetTier = getTier(target);
+  if (!mod || !target) return { ok: false };
+  if (mod.id === target.id) return { ok: false };
 
   const modPos = mod.roles?.highest?.position ?? 0;
   const targetPos = target.roles?.highest?.position ?? 0;
 
-  if (modTier === TIERS.OWNER) return { ok: true };
-
-  if (targetTier >= TIERS.ADMIN && modTier < TIERS.OWNER) {
-    return { ok: false, reason: "You cannot moderate staff members." };
-  }
-
-  if (modPos <= targetPos) {
-    return { ok: false, reason: "Your role is too low." };
+  if (modPos <= targetPos && getTier(mod) !== TIERS.OWNER) {
+    return { ok: false };
   }
 
   return { ok: true };
 }
 
 // =========================
-// COOLDOWN (BIG SERVER SAFE)
+// COOLDOWN
 // =========================
 const cooldowns = new Map();
 
-function checkCooldown(userId, cmd) {
-  const key = `${userId}-${cmd}`;
+function checkCooldown(id, cmd) {
+  const key = `${id}-${cmd}`;
   const now = Date.now();
 
   const expire = cooldowns.get(key);
@@ -77,165 +68,142 @@ function checkCooldown(userId, cmd) {
 }
 
 // =========================
-// EMBEDS (CONSISTENT)
+// EMBEDS
 // =========================
-function success(title, desc) {
+function success(t, d) {
   return new EmbedBuilder()
     .setColor(0x2ECC71)
-    .setTitle(`SUCCESS - ${title}`)
-    .setDescription(desc)
+    .setTitle(`SUCCESS - ${t}`)
+    .setDescription(d)
     .setTimestamp();
 }
 
-function fail(desc) {
+function fail(d) {
   return new EmbedBuilder()
     .setColor(0xE74C3C)
     .setTitle("FAILED")
-    .setDescription(desc)
+    .setDescription(d)
     .setTimestamp();
 }
 
-function perm(desc) {
+function perm(d) {
   return new EmbedBuilder()
     .setColor(0xF1C40F)
     .setTitle("PERMISSION")
-    .setDescription(desc)
+    .setDescription(d)
     .setTimestamp();
 }
 
 // =========================
-// MESSAGE CREATE MODERATION
+// COMMAND EXPORT (FIX FOR YOUR INDEX)
 // =========================
-module.exports = (client) => {
-  client.on("messageCreate", async (message) => {
-    if (!message.guild || message.author.bot) return;
-    if (!message.content.startsWith(".")) return;
+module.exports = {
+  name: "moderation",
 
-    const args = message.content.slice(1).trim().split(/ +/);
-    const cmd = args.shift()?.toLowerCase();
-    if (!cmd) return;
+  async execute() {
+    return; // required so loader DOES NOT skip file
+  },
 
-    const target = message.mentions.members.first();
+  // =========================
+  // MESSAGE CREATE SYSTEM
+  // =========================
+  init(client) {
+    client.on("messageCreate", async (message) => {
+      if (!message.guild || message.author.bot) return;
+      if (!message.content.startsWith(".")) return;
 
-    const commands = ["ban", "kick", "warn", "mute", "unmute", "b", "k", "w"];
+      const args = message.content.slice(1).trim().split(/ +/);
+      const cmd = args.shift()?.toLowerCase();
+      if (!cmd) return;
 
-    if (!commands.includes(cmd)) return;
+      const target = message.mentions.members.first();
 
-    if (checkCooldown(message.author.id, cmd)) return;
+      const cmds = ["ban", "kick", "warn", "mute", "unmute", "b", "k", "w"];
+      if (!cmds.includes(cmd)) return;
 
-    if (!canUseMod(message.member)) {
-      return message.reply({
-        embeds: [perm("You lack moderation permission.")]
-      });
-    }
+      if (checkCooldown(message.author.id, cmd)) return;
 
-    if (!target) {
-      return message.reply({
-        embeds: [fail("You must mention a user.")]
-      });
-    }
+      if (!canUseMod(message.member)) {
+        return message.reply({ embeds: [perm("No permission")] });
+      }
 
-    const check = canModerate(message.member, target);
+      if (!target) {
+        return message.reply({ embeds: [fail("Mention a user")] });
+      }
 
-    if (!check.ok) {
-      return message.reply({
-        embeds: [perm(check.reason)]
-      });
-    }
+      if (!canModerate(message.member, target)) {
+        return message.reply({ embeds: [perm("Cannot moderate this user")] });
+      }
 
-    // =========================
-    // BAN
-    // =========================
-    if (cmd === "ban" || cmd === "b") {
-      await target.ban().catch(() => {});
-      return message.reply({
-        embeds: [
-          success(
-            "BAN",
-            `${target} was banned by <@${message.author.id}>`
-          )
-        ]
-      });
-    }
+      // =========================
+      // BAN
+      // =========================
+      if (cmd === "ban" || cmd === "b") {
+        await target.ban().catch(() => {});
+        return message.reply({
+          embeds: [success("BAN", `${target} was banned by <@${message.author.id}>`)]
+        });
+      }
 
-    // =========================
-    // KICK
-    // =========================
-    if (cmd === "kick" || cmd === "k") {
-      await target.kick().catch(() => {});
-      return message.reply({
-        embeds: [
-          success(
-            "KICK",
-            `${target} was kicked by <@${message.author.id}>`
-          )
-        ]
-      });
-    }
+      // =========================
+      // KICK
+      // =========================
+      if (cmd === "kick" || cmd === "k") {
+        await target.kick().catch(() => {});
+        return message.reply({
+          embeds: [success("KICK", `${target} was kicked by <@${message.author.id}>`)]
+        });
+      }
 
-    // =========================
-    // WARN (MEMORY ONLY)
-    // =========================
-    if (cmd === "warn" || cmd === "w") {
-      if (!message.guild.warns) message.guild.warns = {};
-      if (!message.guild.warns[target.id]) message.guild.warns[target.id] = [];
+      // =========================
+      // WARN
+      // =========================
+      if (cmd === "warn" || cmd === "w") {
+        if (!message.guild.warns) message.guild.warns = {};
+        if (!message.guild.warns[target.id]) message.guild.warns[target.id] = [];
 
-      message.guild.warns[target.id].push({
-        mod: message.author.id,
-        reason: args.join(" ") || "No reason",
-        time: Date.now()
-      });
+        message.guild.warns[target.id].push({
+          mod: message.author.id,
+          reason: args.join(" ") || "No reason",
+          time: Date.now()
+        });
 
-      return message.reply({
-        embeds: [
-          success(
-            "WARN",
-            `${target} was warned by <@${message.author.id}>`
-          )
-        ]
-      });
-    }
+        return message.reply({
+          embeds: [success("WARN", `${target} was warned by <@${message.author.id}>`)]
+        });
+      }
 
-    // =========================
-    // MUTE
-    // =========================
-    if (cmd === "mute") {
-      const time = args[0];
-      if (!time) return message.reply({ embeds: [fail("Use 10m / 1h / 1d")] });
+      // =========================
+      // MUTE
+      // =========================
+      if (cmd === "mute") {
+        const time = args[0];
+        if (!time) return message.reply({ embeds: [fail("Use 10m / 1h / 1d")] });
 
-      const ms =
-        time.endsWith("m")
-          ? parseInt(time) * 60000
-          : time.endsWith("h")
-          ? parseInt(time) * 3600000
-          : parseInt(time) * 86400000;
+        const ms =
+          time.endsWith("m")
+            ? parseInt(time) * 60000
+            : time.endsWith("h")
+            ? parseInt(time) * 3600000
+            : parseInt(time) * 86400000;
 
-      await target.timeout(ms).catch(() => {});
+        await target.timeout(ms).catch(() => {});
 
-      return message.reply({
-        embeds: [
-          success(
-            "MUTE",
-            `${target} was muted by <@${message.author.id}>`
-          )
-        ]
-      });
-    }
+        return message.reply({
+          embeds: [success("MUTE", `${target} was muted by <@${message.author.id}>`)]
+        });
+      }
 
-    // =========================
-    // UNMUTE
-    // =========================
-    if (cmd === "unmute") {
-      await target.timeout(null).catch(() => {});
+      // =========================
+      // UNMUTE
+      // =========================
+      if (cmd === "unmute") {
+        await target.timeout(null).catch(() => {});
 
-      return message.reply({
-        embeds: [
-          success(
-            "UNMUTE",
-            `${target} was unmuted by <@${message.author.id}>`
-          )
-        ]
-      });
-    }
-  });
+        return message.reply({
+          embeds: [success("UNMUTE", `${target} was unmuted by <@${message.author.id}>`)]
+        });
+      }
+    });
+  }
 };
