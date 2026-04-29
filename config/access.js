@@ -12,7 +12,7 @@ module.exports = {
 
   // 🛠 Admins (high-level moderation)
   admin: [
-    "ADMIN_ROLE_ID_1",
+    "1450022204657111155",
     "ADMIN_ROLE_ID_2",
     "ADMIN_ROLE_ID_3"
   ],
