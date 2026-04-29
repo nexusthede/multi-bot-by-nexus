@@ -35,18 +35,26 @@ module.exports = {
       return message.reply({ embeds: [fail("Failed to unjail user")] });
     });
 
-    // 📜 logs
+    // 📜 logs (UNCHANGED LOG SYSTEM)
     if (logChannel) {
-      logChannel.send({
-        embeds: [
-          log(target.user.tag, message.author.tag)
-            .setDescription(
-              `**JAIL EVENT**\n• User\n> ${target.user.tag}\n• Action\n> unjailed\n• By\n> ${message.author.tag}`
-            )
-        ]
-      }).catch(() => {});
+      const embed = log(target.user.tag, message.author.tag);
+
+      if (embed) {
+        embed.setDescription(
+          `**JAIL EVENT**\n• User\n> ${target.user.tag}\n• Action\n> unjailed\n• By\n> ${message.author.tag}`
+        );
+
+        logChannel.send({ embeds: [embed] }).catch(() => {});
+      }
     }
 
-    return message.reply(`> ${target.user.tag} has been unjailed.`);
+    // 💬 command channel embed (NO COLOR)
+    return message.reply({
+      embeds: [
+        {
+          description: `${target.user.tag} has been unjailed.`
+        }
+      ]
+    });
   }
 };
