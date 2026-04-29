@@ -13,7 +13,7 @@ const base = (desc) =>
     .setDescription(desc)
     .setFooter({ text: `Today at ${time()}` });
 
-// ❌ FAIL (now same universal color)
+// ❌ FAIL
 const fail = (msg) =>
   base(
     `**FAILED**\n• Reason\n> ${msg}`
@@ -25,22 +25,22 @@ const permission = (perm = "Permission") =>
     `**ACCESS DENIED**\n• Required\n> ${perm}`
   );
 
-// 🔒 SUCCESS
+// 🔒 SUCCESS (no tag, only formatted text)
 const success = (msg) =>
   base(
     `**SUCCESS**\n• Action\n> ${msg}`
   );
 
-// ⚖ HIERARCHY USER
+// ⚖ HIERARCHY USER (FIXED MENTION)
 const hierarchyUser = (target) =>
   base(
-    `**HIERARCHY BLOCKED**\n• Target\n> ${target.user.tag}\n• Status\n> Higher role`
+    `**HIERARCHY BLOCKED**\n• Target\n> <@${target.id}>\n• Status\n> Higher role`
   );
 
-// 🤖 HIERARCHY BOT
+// 🤖 HIERARCHY BOT (FIXED MENTION)
 const hierarchyBot = (target) =>
   base(
-    `**HIERARCHY BLOCKED**\n• Target\n> ${target.user.tag}\n• Status\n> Bot role too low`
+    `**HIERARCHY BLOCKED**\n• Target\n> <@${target.id}>\n• Status\n> Bot role too low`
   );
 
 module.exports = {
