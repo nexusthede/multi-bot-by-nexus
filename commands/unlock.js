@@ -1,5 +1,5 @@
 const access = require("../config/access");
-const { unlock, fail, permission } = require("../utils/embeds/embedchannels");
+const { unlock } = require("../utils/embeds/embedchannels");
 
 module.exports = {
   name: "unlock",
@@ -11,20 +11,17 @@ module.exports = {
     const isOwner = access.owner?.some(id => message.member.roles.cache.has(id));
     const isAdmin = access.admin?.some(id => message.member.roles.cache.has(id));
 
-    if (!isOwner && !isAdmin)
-      return message.reply({ embeds: [permission()] });
+    if (!isOwner && !isAdmin) return;
 
     const channel = message.channel;
-    const everyone = message.guild.roles.everyone;
 
-    await channel.permissionOverwrites.edit(everyone, {
-      SendMessages: true
-    }).catch(() => {
-      return message.reply({ embeds: [fail("Failed to unlock channel")] });
-    });
+    await channel.permissionOverwrites.edit(
+      message.guild.roles.everyone.id,
+      { SendMessages: true }
+    ).catch(() => {});
 
-    return message.reply({
-      embeds: [unlock(channel.name)]
+    return message.channel.send({
+      embeds: [unlock(channel.id)]
     });
   }
 };
