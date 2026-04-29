@@ -1,82 +1,60 @@
-const { EmbedBuilder } = require("discord.js");
+const {
+  fail,
+  permission,
+  jailed,
+  log
+} = require("../utils/embeds/embedjail");
 
-const CONFIG = {
-  roles: {
-    owner: ["1449945270782525502", "1466497373776908353"],
-    admin: ["1450022204657111155"],
-    jail: "1492118672267939861"
-  },
-
-  channels: {
-    logs: "1497815554956853359"
-  }
-};
-
-function isAuthorized(member) {
-  return (
-    CONFIG.roles.owner.some(id => member.roles.cache.has(id)) ||
-    CONFIG.roles.admin.some(id => member.roles.cache.has(id))
-  );
-}
-
-function logEmbed(title, target, moderator, color) {
-  return new EmbedBuilder()
-    .setColor(color)
-    .setDescription(
-      `${title}\n\n👤 Target: ${target.user.tag}\n🛡 Moderator: ${moderator.tag}`
-    )
-    .setTimestamp();
-}
+const access = require("../config/access");
 
 module.exports = {
   name: "jail",
-  aliases: ["j", "unjail"],
+  aliases: ["j"],
 
-  async execute(message, args) {
+  async execute(message) {
     if (!message.guild || message.author.bot) return;
 
-    const sub = args[0]?.toLowerCase();
     const target = message.mentions.members.first();
 
-    const jailRole = message.guild.roles.cache.get(CONFIG.roles.jail);
-    const logChannel = message.guild.channels.cache.get(CONFIG.channels.logs);
+    const jailRole = message.guild.roles.cache.get("1492118672267939861");
+    const logChannel = message.guild.channels.cache.get("1497815554956853359");
+    const jailChannel = message.guild.channels.cache.get("1497813469918003330");
 
-    if (!isAuthorized(message.member)) {
-      return message.reply("❌ No permission.");
-    }
+    // ❌ no user
+    if (!target)
+      return message.reply({ embeds: [fail("No user mentioned")] });
 
-    if (!target) return message.reply("❌ Mention a user.");
+    // ⚖ admin only
+    if (!message.member.roles.cache.some(r => access.admin.includes(r.id)))
+      return message.reply({ embeds: [permission()] });
 
-    if (target.id === message.author.id) {
-      return message.reply("❌ You cannot use this on yourself.");
-    }
+    // ❌ self
+    if (target.id === message.author.id)
+      return message.reply({ embeds: [fail("You cannot jail yourself")] });
 
-    if (!jailRole) return message.reply("❌ Jail role not found.");
+    // ❌ already jailed
+    if (target.roles.cache.has(jailRole.id))
+      return message.reply({ embeds: [fail("User is already jailed")] });
 
-    if (sub === "unjail" || sub === "remove") {
-      await target.roles.remove(jailRole).catch(() => {
-        return message.reply("❌ Cannot unjail user.");
-      });
-
-      if (logChannel) {
-        logChannel.send({
-          embeds: [logEmbed("UNJAILED", target, message.author, 0x2ECC71)]
-        }).catch(() => {});
-      }
-
-      return message.reply(`✅ ${target.user.tag} unjailed.`);
-    }
-
+    // 🔒 jail
     await target.roles.add(jailRole).catch(() => {
-      return message.reply("❌ Cannot jail user.");
+      return message.reply({ embeds: [fail("Failed to jail user")] });
     });
 
+    // 📜 logs
     if (logChannel) {
       logChannel.send({
-        embeds: [logEmbed("JAILED", target, message.author, 0xE74C3C)]
+        embeds: [log(target.user.tag, message.author.tag)]
       }).catch(() => {});
     }
 
-    return message.reply(`🚫 ${target.user.tag} jailed.`);
+    // 💬 jail channel
+    if (jailChannel) {
+      jailChannel.send(`> ${target.user.tag} has been jailed.`);
+    }
+
+    return message.reply({
+      embeds: [jailed(target.user.tag, message.author.tag)]
+    });
   }
 };
