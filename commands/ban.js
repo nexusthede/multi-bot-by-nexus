@@ -42,7 +42,7 @@ module.exports = {
 
     return message.reply({
       embeds: [
-        success(`${target.user.tag} was banned by ${message.author.tag}`)
+        success(`<@${target.id}> was banned by <@${message.author.id}>`)
       ]
     });
   }
