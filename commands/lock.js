@@ -11,21 +11,17 @@ module.exports = {
     const isOwner = access.owner?.some(id => message.member.roles.cache.has(id));
     const isAdmin = access.admin?.some(id => message.member.roles.cache.has(id));
 
-    if (!isOwner && !isAdmin)
-      return message.reply({ embeds: [permission()] });
+    if (!isOwner && !isAdmin) return;
 
     const channel = message.channel;
 
-    const everyone = message.guild.roles.everyone;
+    await channel.permissionOverwrites.edit(
+      message.guild.roles.everyone.id,
+      { SendMessages: false }
+    ).catch(() => {});
 
-    await channel.permissionOverwrites.edit(everyone, {
-      SendMessages: false
-    }).catch(() => {
-      return message.reply({ embeds: [fail("Failed to lock channel")] });
-    });
-
-    return message.reply({
-      embeds: [lock(channel.name)]
+    return message.channel.send({
+      embeds: [lock(channel.id)]
     });
   }
 };
