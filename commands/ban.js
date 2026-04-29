@@ -26,6 +26,7 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
+    // 🛡 now handled by guards.js (owner + staff included)
     if (!hasAccess(message.member, access.mod))
       return message.channel.send({
         embeds: [permission("Ban Members")]
