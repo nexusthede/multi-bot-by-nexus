@@ -26,19 +26,19 @@ module.exports = {
     // ❌ no user
     if (!target)
       return message.reply({
-        embeds: [fail("No user mentioned")]
+        embeds: [fail("> No user mentioned")]
       });
 
     // ⚖ staff only
     if (!hasAccess(message.member, access.mod))
       return message.reply({
-        embeds: [permission("Staff only")]
+        embeds: [permission("> Staff only")]
       });
 
     // 🛡 protected
     if (isProtected(target))
       return message.reply({
-        embeds: [fail("This user is protected")]
+        embeds: [fail("> This user is protected")]
       });
 
     // ⚖ hierarchy
@@ -76,11 +76,11 @@ module.exports = {
 
     await data.save();
 
-    // ✅ success embed (your system)
+    // ✅ success embed (FIXED MENTIONS + STYLE)
     return message.reply({
       embeds: [
         success(
-          `${target.user.tag} was warned by ${message.author.tag}\n• Reason:\n> ${reason}\n• Total warns:\n> ${data.warns.length}`
+          `> <@${target.id}> was warned by <@${message.author.id}>\n• Reason:\n> ${reason}\n• Total warns:\n> ${data.warns.length}`
         )
       ]
     });
