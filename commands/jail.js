@@ -22,7 +22,7 @@ module.exports = {
 
     // ❌ no user
     if (!target)
-      return message.channel.send({ embeds: [fail("No user mentioned")] });
+      return message.channel.send({ embeds: [fail("> No user mentioned")] });
 
     // ⚖ guard check (OWNER + ADMIN ONLY)
     if (!isAllowed(message.member, access))
@@ -30,22 +30,22 @@ module.exports = {
 
     // ❌ self jail
     if (target.id === message.author.id)
-      return message.channel.send({ embeds: [fail("You cannot jail yourself")] });
+      return message.channel.send({ embeds: [fail("> You cannot jail yourself")] });
 
     // ❌ role missing safety check
     if (!jailRole)
-      return message.channel.send({ embeds: [fail("Jail role not found")] });
+      return message.channel.send({ embeds: [fail("> Jail role not found")] });
 
     // ❌ already jailed
     if (target.roles.cache.has(jailRole.id))
-      return message.channel.send({ embeds: [fail("User is already jailed")] });
+      return message.channel.send({ embeds: [fail("> User is already jailed")] });
 
     // 🔒 jail role
     try {
       await target.roles.add(jailRole);
     } catch (err) {
       console.log("JAIL ERROR:", err);
-      return message.channel.send({ embeds: [fail("Failed to jail user")] });
+      return message.channel.send({ embeds: [fail("> Failed to jail user")] });
     }
 
     // 📜 logs
