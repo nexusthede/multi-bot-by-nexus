@@ -6,6 +6,7 @@ const {
 } = require("../utils/embeds/embedjail");
 
 const access = require("../config/access");
+const { isAllowed } = require("../utils/guards");
 
 module.exports = {
   name: "jail",
@@ -23,8 +24,8 @@ module.exports = {
     if (!target)
       return message.channel.send({ embeds: [fail("No user mentioned")] });
 
-    // ⚖ permission check
-    if (!message.member.roles.cache.some(r => access.admin?.includes(r.id)))
+    // ⚖ guard check (OWNER + ADMIN ONLY)
+    if (!isAllowed(message.member, access))
       return message.channel.send({ embeds: [permission()] });
 
     // ❌ self jail
@@ -39,7 +40,7 @@ module.exports = {
     if (target.roles.cache.has(jailRole.id))
       return message.channel.send({ embeds: [fail("User is already jailed")] });
 
-    // 🔒 jail role (NOW WITH REAL ERROR LOGGING)
+    // 🔒 jail role
     try {
       await target.roles.add(jailRole);
     } catch (err) {
@@ -57,7 +58,9 @@ module.exports = {
     // 💬 response
     return message.channel.send({
       embeds: [
-        jailed(target.id, message.author.id)
+        {
+          description: `> <@${target.id}> has been jailed.`
+        }
       ]
     });
   }
