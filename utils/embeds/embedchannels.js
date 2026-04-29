@@ -2,38 +2,38 @@ const { EmbedBuilder } = require("discord.js");
 const colors = require("./colors");
 
 // 📌 CHANNEL ACTIONS (UNIVERSAL COLOR)
-function lock(channel) {
+function lock(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`#${channel} has been locked`);
+    .setDescription(`<#${channelId}> has been locked`);
 }
 
-function unlock(channel) {
+function unlock(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`#${channel} has been unlocked`);
+    .setDescription(`<#${channelId}> has been unlocked`);
 }
 
-function hide(channel) {
+function hide(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`#${channel} is now hidden`);
+    .setDescription(`<#${channelId}> is now hidden`);
 }
 
-function unhide(channel) {
+function unhide(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`#${channel} is now visible`);
+    .setDescription(`<#${channelId}> is now visible`);
 }
 
-// ❌ FAIL (NOW ALSO UNIVERSAL COLOR)
+// ❌ FAIL
 function fail(reason) {
   return new EmbedBuilder()
     .setColor(colors.main)
     .setDescription(`FAILED\n• Reason\n> ${reason}`);
 }
 
-// ⚖ PERMISSION (ALSO UNIVERSAL COLOR)
+// ⚖ PERMISSION
 function permission() {
   return new EmbedBuilder()
     .setColor(colors.main)
