@@ -1,4 +1,4 @@
-const access = require("../config/access");
+const access const access = require("../config/access");
 
 const {
   fail,
@@ -22,13 +22,13 @@ module.exports = {
     const target = message.mentions.members.first();
 
     if (!target)
-      return message.reply({ embeds: [fail("No user mentioned")] });
+      return message.reply({ embeds: [fail("> No user mentioned")] });
 
     if (!hasAccess(message.member, access.mod))
-      return message.reply({ embeds: [permission("Ban Members")] });
+      return message.reply({ embeds: [permission("> Ban Members")] });
 
     if (isProtected(target))
-      return message.reply({ embeds: [fail("This user is protected")] });
+      return message.reply({ embeds: [fail("> This user is protected")] });
 
     const check = checkHierarchy(message, target);
 
@@ -42,7 +42,7 @@ module.exports = {
 
     return message.reply({
       embeds: [
-        success(`<@${target.id}> was banned by <@${message.author.id}>`)
+        success(`> <@${target.id}> was banned by <@${message.author.id}>`)
       ]
     });
   }
