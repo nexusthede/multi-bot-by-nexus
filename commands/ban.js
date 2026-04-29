@@ -1,25 +1,48 @@
-const { actionEmbed, failEmbed, permissionEmbed } = require("../utils/embeds");
-const { PermissionsBitField } = require("discord.js");
+const access = require("../config/access");
+
+const {
+  fail,
+  permission,
+  hierarchyUser,
+  hierarchyBot,
+  success
+} = require("../utils/embeds/embedmod");
+
+const {
+  hasAccess,
+  isProtected,
+  checkHierarchy
+} = require("../utils/guards");
 
 module.exports = {
   name: "ban",
-  aliases: ["b", "hammer"],
 
-  async execute(message, args) {
+  async execute(message) {
     const target = message.mentions.members.first();
+
     if (!target)
-      return message.reply({ embeds: [failEmbed("Mention a user")] });
+      return message.reply({ embeds: [fail("No user mentioned")] });
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-      return message.reply({ embeds: [permissionEmbed("Ban Members")] });
+    if (!hasAccess(message.member, access.mod))
+      return message.reply({ embeds: [permission("Ban Members")] });
 
-    if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.BanMembers))
-      return message.reply({ embeds: [permissionEmbed("Bot lacks Ban Members")] });
+    if (isProtected(target))
+      return message.reply({ embeds: [fail("This user is protected")] });
+
+    const check = checkHierarchy(message, target);
+
+    if (check === "USER")
+      return message.reply({ embeds: [hierarchyUser(target)] });
+
+    if (check === "BOT")
+      return message.reply({ embeds: [hierarchyBot(target)] });
 
     await target.ban();
 
     return message.reply({
-      embeds: [actionEmbed("ban", target, message.author)]
+      embeds: [
+        success(`${target.user.tag} was banned by ${message.author.tag}`)
+      ]
     });
   }
 };
