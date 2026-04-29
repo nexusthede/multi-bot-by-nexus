@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
+const colors = require("./colors");
 
 const time = () =>
   new Date().toLocaleTimeString([], {
@@ -16,31 +17,31 @@ const base = (desc, color) =>
 const fail = (msg) =>
   base(
     `**FAILED**\n• Reason\n> ${msg}`,
-    0xE74C3C
+    colors.main
   );
 
 // ⚖ PERMISSION
 const permission = () =>
   base(
     `**ACCESS DENIED**\n• Requirement\n> Admin / Owner`,
-    0xE74C3C
+    colors.main
   );
 
 // 🔒 MAIN ACTION (JAIL)
 const jailed = (target, moderator) =>
   base(
     `**USER JAILED**\n• Target\n> ${target}\n• Moderator\n> ${moderator}`,
-    0xE74C3C
+    colors.main
   );
 
-// 📜 LOG EMBED (UNCHANGED STYLE, BUT SAFE FOR MENTIONS)
+// 📜 LOG EMBED
 const log = (target, moderator) =>
   base(
     `**JAIL EVENT**\n` +
     `• User\n> ${target}\n` +
     `• Action\n> jailed\n` +
     `• By\n> ${moderator}`,
-    0x2F3136
+    colors.main
   );
 
 module.exports = {
