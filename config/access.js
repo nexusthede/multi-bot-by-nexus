@@ -1,29 +1,33 @@
 module.exports = {
-  // 👑 Owners (full control)
   owner: [
-    "OWNER_ROLE_ID"
+    "OWNER_ROLE_ID_1",
+    "OWNER_ROLE_ID_2"
   ],
 
-  // 🛠 Admins (high-level moderation)
   admin: [
     "ADMIN_ROLE_ID_1",
     "ADMIN_ROLE_ID_2"
   ],
 
-  // ⚖ Moderators (basic moderation)
   mod: [
-    "MOD_ROLE_ID_1",
-    "MOD_ROLE_ID_2"
+    "MOD_ROLE_ID_1"
   ],
 
-  // 🧰 Helpers (optional lower staff)
   helper: [
     "HELPER_ROLE_ID_1"
   ],
 
-  // 🛡 Protected roles (cannot be banned/kicked/muted)
+  support: [
+    "SUPPORT_ROLE_ID_1"
+  ],
+
+  // 🛡 Protected roles (immune from moderation)
   protected: [
-    "OWNER_ROLE_ID",
-    "ADMIN_ROLE_ID_1"
+    "OWNER_ROLE_ID_1",
+    "OWNER_ROLE_ID_2",
+    "ADMIN_ROLE_ID_1",
+    "ADMIN_ROLE_ID_2",
+    "HEAD_ADMIN_ROLE_ID",
+    "SERVER_MANAGER_ROLE_ID"
   ]
 };
