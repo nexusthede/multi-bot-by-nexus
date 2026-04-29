@@ -2,7 +2,7 @@ module.exports = {
   // 👑 Owners (full control)
   owner: [
     "1449945270782525502",
-    "OWNER_ROLE_ID_2"
+    "1466497373776908353"
   ],
 
   // 🧠 Co Owners (optional top staff)
