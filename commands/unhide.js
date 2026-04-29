@@ -1,9 +1,9 @@
 const access = require("../config/access");
-const { hide } = require("../utils/embeds/embedchannels");
+const { unhide } = require("../utils/embeds/embedchannels");
 
 module.exports = {
-  name: "hide",
-  aliases: ["h"],
+  name: "unhide",
+  aliases: ["uh"],
 
   async execute(message) {
     if (!message.guild || message.author.bot) return;
@@ -17,11 +17,11 @@ module.exports = {
 
     await channel.permissionOverwrites.edit(
       message.guild.roles.everyone.id,
-      { ViewChannel: false }
+      { ViewChannel: true }
     ).catch(() => {});
 
     return message.channel.send({
-      embeds: [hide(channel.id)]
+      embeds: [unhide(channel.id)]
     });
   }
 };
