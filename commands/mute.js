@@ -18,8 +18,18 @@ module.exports = {
   name: "mute",
   aliases: ["timeout", "tm"],
 
-  async execute(message) {
+  async execute(message, args) {
     const target = message.mentions.members.first();
+    const duration = args[1];
+
+    const ms =
+      duration?.endsWith("m")
+        ? parseInt(duration) * 60 * 1000
+        : duration?.endsWith("h")
+        ? parseInt(duration) * 60 * 60 * 1000
+        : duration?.endsWith("d")
+        ? parseInt(duration) * 24 * 60 * 60 * 1000
+        : 10 * 60 * 1000;
 
     if (!target)
       return message.reply({ embeds: [fail("No user mentioned")] });
@@ -38,7 +48,7 @@ module.exports = {
     if (check === "BOT")
       return message.reply({ embeds: [hierarchyBot(target)] });
 
-    await target.timeout(10 * 60 * 1000);
+    await target.timeout(ms);
 
     return message.reply({
       embeds: [
