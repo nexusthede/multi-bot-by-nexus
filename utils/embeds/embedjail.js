@@ -13,6 +13,15 @@ const base = (desc, color) =>
     .setDescription(desc)
     .setFooter({ text: `Today at ${time()}` });
 
+// 🔧 FIX: make mentions clickable
+function mention(input) {
+  if (!input) return "Unknown";
+  if (typeof input === "string" && (input.startsWith("<@") || input.startsWith("<#"))) {
+    return input;
+  }
+  return `<@${input}>`;
+}
+
 // ❌ FAIL
 const fail = (msg) =>
   base(
@@ -27,20 +36,20 @@ const permission = () =>
     colors.main
   );
 
-// 🔒 MAIN ACTION (JAIL)
+// 🔒 MAIN ACTION (JAIL) — FIXED MENTIONS
 const jailed = (target, moderator) =>
   base(
-    `**USER JAILED**\n• Target\n> ${target}\n• Moderator\n> ${moderator}`,
+    `**USER JAILED**\n• Target\n> ${mention(target)}\n• Moderator\n> ${mention(moderator)}`,
     colors.main
   );
 
-// 📜 LOG EMBED
+// 📜 LOG EMBED — FIXED MENTIONS
 const log = (target, moderator) =>
   base(
     `**JAIL EVENT**\n` +
-    `• User\n> ${target}\n` +
+    `• User\n> ${mention(target)}\n` +
     `• Action\n> jailed\n` +
-    `• By\n> ${moderator}`,
+    `• By\n> ${mention(moderator)}`,
     colors.main
   );
 
