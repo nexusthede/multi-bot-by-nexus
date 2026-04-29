@@ -1,25 +1,61 @@
-const { actionEmbed, failEmbed, permissionEmbed } = require("../utils/embeds");
-const { PermissionsBitField } = require("discord.js");
+const access = require("../config/access");
+
+const {
+  fail,
+  permission,
+  hierarchyUser,
+  hierarchyBot,
+  success
+} = require("../utils/embeds/embedmod");
+
+const {
+  hasAccess,
+  isProtected,
+  checkHierarchy
+} = require("../utils/guards");
 
 module.exports = {
   name: "mute",
-  aliases: ["timeout", "m"],
 
   async execute(message, args) {
     const target = message.mentions.members.first();
-    const time = args[1];
 
-    if (!target || !time)
-      return message.reply({ embeds: [failEmbed("Usage: .mute @user time")] });
+    if (!target)
+      return message.reply({
+        embeds: [fail("No user mentioned")]
+      });
 
-    const ms = time.endsWith("m")
-      ? parseInt(time) * 60000
-      : parseInt(time) * 3600000;
+    if (!hasAccess(message.member, access.mod))
+      return message.reply({
+        embeds: [permission("Moderate Members")]
+      });
 
-    await target.timeout(ms);
+    if (isProtected(target))
+      return message.reply({
+        embeds: [fail("This user is protected")]
+      });
+
+    const check = checkHierarchy(message, target);
+
+    if (check === "USER")
+      return message.reply({
+        embeds: [hierarchyUser(target)]
+      });
+
+    if (check === "BOT")
+      return message.reply({
+        embeds: [hierarchyBot(target)]
+      });
+
+    // default mute time (10 minutes)
+    const duration = 10 * 60 * 1000;
+
+    await target.timeout(duration);
 
     return message.reply({
-      embeds: [actionEmbed("mute", target, message.author)]
+      embeds: [
+        success(`${target.user.tag} was muted by ${message.author.tag}`)
+      ]
     });
   }
 };
