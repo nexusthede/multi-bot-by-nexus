@@ -1,5 +1,5 @@
 const access = require("../config/access");
-const { hide, fail, permission } = require("../utils/embeds/embedchannels");
+const { hide } = require("../utils/embeds/embedchannels");
 
 module.exports = {
   name: "hide",
@@ -11,20 +11,17 @@ module.exports = {
     const isOwner = access.owner?.some(id => message.member.roles.cache.has(id));
     const isAdmin = access.admin?.some(id => message.member.roles.cache.has(id));
 
-    if (!isOwner && !isAdmin)
-      return message.reply({ embeds: [permission()] });
+    if (!isOwner && !isAdmin) return;
 
     const channel = message.channel;
-    const everyone = message.guild.roles.everyone;
 
-    await channel.permissionOverwrites.edit(everyone, {
-      ViewChannel: false
-    }).catch(() => {
-      return message.reply({ embeds: [fail("Failed to hide channel")] });
-    });
+    await channel.permissionOverwrites.edit(
+      message.guild.roles.everyone.id,
+      { ViewChannel: false }
+    ).catch(() => {});
 
-    return message.reply({
-      embeds: [hide(channel.name)]
+    return message.channel.send({
+      embeds: [hide(channel.id)]
     });
   }
 };
