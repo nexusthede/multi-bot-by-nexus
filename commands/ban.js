@@ -53,7 +53,7 @@ module.exports = {
 
     return message.channel.send({
       embeds: [
-        success(`> ${target.user.tag} was banned by ${message.author.tag}`)
+        success(`${target.user.tag} was banned by ${message.author.tag}`)
       ]
     });
   }
