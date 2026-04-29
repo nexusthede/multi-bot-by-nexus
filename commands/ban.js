@@ -1,4 +1,4 @@
-const access const access = require("../config/access");
+const access = require("../config/access");
 
 const {
   fail,
