@@ -22,27 +22,38 @@ module.exports = {
     const target = message.mentions.members.first();
 
     if (!target)
-      return message.reply({ embeds: [fail("> No user mentioned")] });
+      return message.channel.send({
+        embeds: [fail("No user mentioned")]
+      });
 
+    // 🛡 staff access (now includes owner via guards.js)
     if (!hasAccess(message.member, access.mod))
-      return message.reply({ embeds: [permission("> Kick Members")] });
+      return message.channel.send({
+        embeds: [permission("Kick Members")]
+      });
 
     if (isProtected(target))
-      return message.reply({ embeds: [fail("> This user is protected")] });
+      return message.channel.send({
+        embeds: [fail("This user is protected")]
+      });
 
     const check = checkHierarchy(message, target);
 
     if (check === "USER")
-      return message.reply({ embeds: [hierarchyUser(target)] });
+      return message.channel.send({
+        embeds: [hierarchyUser(target)]
+      });
 
     if (check === "BOT")
-      return message.reply({ embeds: [hierarchyBot(target)] });
+      return message.channel.send({
+        embeds: [hierarchyBot(target)]
+      });
 
     await target.kick();
 
-    return message.reply({
+    return message.channel.send({
       embeds: [
-        success(`> <@${target.id}> was kicked by <@${message.author.id}>`)
+        success(`> ${target.user.tag} was kicked by ${message.author.tag}`)
       ]
     });
   }
