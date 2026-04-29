@@ -1,4 +1,4 @@
- "const {
+const {
   fail,
   permission,
   log
