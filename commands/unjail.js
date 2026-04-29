@@ -5,6 +5,7 @@ const {
 } = require("../utils/embeds/embedjail");
 
 const access = require("../config/access");
+const colors = require("../utils/embeds/colors");
 
 module.exports = {
   name: "unjail",
@@ -46,11 +47,12 @@ module.exports = {
       logChannel.send({ embeds: [embed] }).catch(() => {});
     }
 
-    // 💬 main response (NO REPLY SYSTEM)
+    // 💬 main response (FIXED COLOR SYSTEM)
     return message.channel.send({
       embeds: [
         {
-          description: `<@${target.id}> has been unjailed.`
+          color: colors.main,
+          description: `> <@${target.id}> has been unjailed.`
         }
       ]
     });
