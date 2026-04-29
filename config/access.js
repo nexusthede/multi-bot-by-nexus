@@ -25,20 +25,20 @@ module.exports = {
 
   // 🛡 Moderators (standard moderation)
   mod: [
-    "MOD_ROLE_ID_1",
+    "1465960511375151288",
     "MOD_ROLE_ID_2",
     "MOD_ROLE_ID_3"
   ],
 
   // 🧪 Trial Moderators (limited access)
   trialmod: [
-    "TRIAL_MOD_ROLE_ID_1",
+    "1468316755847024730",
     "TRIAL_MOD_ROLE_ID_2"
   ],
 
   // 🎯 Helpers (basic support tools)
   helper: [
-    "HELPER_ROLE_ID_1",
+    "1468316715455614977",
     "HELPER_ROLE_ID_2",
     "HELPER_ROLE_ID_3"
   ],
@@ -55,9 +55,9 @@ module.exports = {
 
   // 🛡 Protected roles (immune from moderation)
   protected: [
-    "OWNER_ROLE_ID_1",
-    "OWNER_ROLE_ID_2",
-    "CO_OWNER_ROLE_ID_1",
+    "14499452707825255021",
+    "1466497373776908353",
+    "1450022204657111155",
     "ADMIN_ROLE_ID_1",
     "HEAD_ADMIN_ROLE_ID"
   ]
