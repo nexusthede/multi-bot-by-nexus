@@ -18,7 +18,6 @@ module.exports = {
 
     const jailRole = message.guild.roles.cache.get("1492118672267939861");
     const logChannel = message.guild.channels.cache.get("1497815554956853359");
-    const jailChannel = message.guild.channels.cache.get("1497813469918003330");
 
     // ❌ no user
     if (!target)
@@ -36,25 +35,27 @@ module.exports = {
     if (target.roles.cache.has(jailRole.id))
       return message.reply({ embeds: [fail("User is already jailed")] });
 
-    // 🔒 jail
+    // 🔒 jail role
     await target.roles.add(jailRole).catch(() => {
       return message.reply({ embeds: [fail("Failed to jail user")] });
     });
 
-    // 📜 logs
+    // 📜 logs (UNCHANGED)
     if (logChannel) {
       logChannel.send({
         embeds: [log(target.user.tag, message.author.tag)]
       }).catch(() => {});
     }
 
-    // 💬 jail channel
-    if (jailChannel) {
-      jailChannel.send(`> ${target.user.tag} has been jailed.`);
-    }
+    // ❌ jail channel removed completely
 
+    // 💬 embed in command channel
     return message.reply({
-      embeds: [jailed(target.user.tag, message.author.tag)]
+      embeds: [
+        {
+          description: `${target.user.tag} has been jailed.`
+        }
+      ]
     });
   }
 };
