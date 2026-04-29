@@ -1,3 +1,3 @@
 module.exports = {
-  main: 7B3FE4 // universal embed color (Discord gray)
+  main: 0x7B3FE4 // universal embed color (Discord gray)
 };
