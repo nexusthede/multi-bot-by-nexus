@@ -1,46 +1,41 @@
+const { EmbedBuilder } = require("discord.js");
+
+// 🔴 ERROR COLOR ONLY
+const errorColor = 0xED4245;
+
+// 📌 CHANNEL ACTIONS (DEFAULT GRAY - NO setColor)
 function lock(channel) {
-  return {
-    description: `#${channel} has been locked`
-  };
+  return new EmbedBuilder()
+    .setDescription(`#${channel} has been locked`);
 }
 
 function unlock(channel) {
-  return {
-    description: `#${channel} has been unlocked`
-  };
+  return new EmbedBuilder()
+    .setDescription(`#${channel} has been unlocked`);
 }
 
 function hide(channel) {
-  return {
-    description: `#${channel} is now hidden`
-  };
+  return new EmbedBuilder()
+    .setDescription(`#${channel} is now hidden`);
 }
 
 function unhide(channel) {
-  return {
-    description: `#${channel} is now visible`
-  };
+  return new EmbedBuilder()
+    .setDescription(`#${channel} is now visible`);
 }
 
-// ❌ FAIL EMBED
+// ❌ FAIL (RED)
 function fail(reason) {
-  return {
-    description: `FAILED\n• Reason\n> ${reason}`
-  };
+  return new EmbedBuilder()
+    .setColor(errorColor)
+    .setDescription(`FAILED\n• Reason\n> ${reason}`);
 }
 
-// ⚖ PERMISSION EMBED
+// ⚖ PERMISSION (RED)
 function permission() {
-  return {
-    description: `ACCESS DENIED\n• Status\n> Missing permissions`
-  };
-}
-
-// ✅ SUCCESS EMBED (generic fallback if needed)
-function success(action) {
-  return {
-    description: `SUCCESS\n• Action\n> ${action}`
-  };
+  return new EmbedBuilder()
+    .setColor(errorColor)
+    .setDescription(`ACCESS DENIED\n• Status\n> Missing permissions`);
 }
 
 module.exports = {
@@ -49,6 +44,5 @@ module.exports = {
   hide,
   unhide,
   fail,
-  permission,
-  success
+  permission
 };
