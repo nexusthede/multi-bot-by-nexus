@@ -32,27 +32,37 @@ module.exports = {
         : 10 * 60 * 1000;
 
     if (!target)
-      return message.reply({ embeds: [fail("> No user mentioned")] });
+      return message.channel.send({
+        embeds: [fail("No user mentioned")]
+      });
 
     if (!hasAccess(message.member, access.mod))
-      return message.reply({ embeds: [permission("> Moderate Members")] });
+      return message.channel.send({
+        embeds: [permission("Moderate Members")]
+      });
 
     if (isProtected(target))
-      return message.reply({ embeds: [fail("> This user is protected")] });
+      return message.channel.send({
+        embeds: [fail("This user is protected")]
+      });
 
     const check = checkHierarchy(message, target);
 
     if (check === "USER")
-      return message.reply({ embeds: [hierarchyUser(target)] });
+      return message.channel.send({
+        embeds: [hierarchyUser(target)]
+      });
 
     if (check === "BOT")
-      return message.reply({ embeds: [hierarchyBot(target)] });
+      return message.channel.send({
+        embeds: [hierarchyBot(target)]
+      });
 
     await target.timeout(ms);
 
-    return message.reply({
+    return message.channel.send({
       embeds: [
-        success(`> <@${target.id}> was muted by <@${message.author.id}>`)
+        success(`> ${target.user.tag} was muted by ${message.author.tag}`)
       ]
     });
   }
