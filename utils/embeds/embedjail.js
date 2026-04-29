@@ -26,14 +26,14 @@ const permission = () =>
     0xE74C3C
   );
 
-// 🔒 MAIN ACTION
+// 🔒 MAIN ACTION (JAIL)
 const jailed = (target, moderator) =>
   base(
     `**USER JAILED**\n• Target\n> ${target}\n• Moderator\n> ${moderator}`,
     0xE74C3C
   );
 
-// 📜 CLEAN LOG STYLE (THIS IS THE GOOD ONE)
+// 📜 LOG EMBED (UNCHANGED STYLE, BUT SAFE FOR MENTIONS)
 const log = (target, moderator) =>
   base(
     `**JAIL EVENT**\n` +
