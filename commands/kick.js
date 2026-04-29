@@ -22,13 +22,13 @@ module.exports = {
     const target = message.mentions.members.first();
 
     if (!target)
-      return message.reply({ embeds: [fail("No user mentioned")] });
+      return message.reply({ embeds: [fail("> No user mentioned")] });
 
     if (!hasAccess(message.member, access.mod))
-      return message.reply({ embeds: [permission("Kick Members")] });
+      return message.reply({ embeds: [permission("> Kick Members")] });
 
     if (isProtected(target))
-      return message.reply({ embeds: [fail("This user is protected")] });
+      return message.reply({ embeds: [fail("> This user is protected")] });
 
     const check = checkHierarchy(message, target);
 
