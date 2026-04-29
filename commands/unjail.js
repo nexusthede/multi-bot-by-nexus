@@ -1,4 +1,4 @@
-const {
+ "const {
   fail,
   permission,
   log
@@ -20,39 +20,37 @@ module.exports = {
 
     // ❌ no user
     if (!target)
-      return message.reply({ embeds: [fail("No user mentioned")] });
+      return message.channel.send({ embeds: [fail("No user mentioned")] });
 
-    // ⚖ admin only
+    // ⚖ access check (admins/owners only)
     if (!message.member.roles.cache.some(r => access.admin.includes(r.id)))
-      return message.reply({ embeds: [permission()] });
+      return message.channel.send({ embeds: [permission()] });
 
     // ❌ not jailed
     if (!target.roles.cache.has(jailRole.id))
-      return message.reply({ embeds: [fail("User is not jailed")] });
+      return message.channel.send({ embeds: [fail("User is not jailed")] });
 
-    // 🔓 unjail
+    // 🔓 remove jail role
     await target.roles.remove(jailRole).catch(() => {
-      return message.reply({ embeds: [fail("Failed to unjail user")] });
+      return message.channel.send({ embeds: [fail("Failed to unjail user")] });
     });
 
-    // 📜 logs (UNCHANGED LOG SYSTEM)
+    // 📜 logs (UNCHANGED SYSTEM)
     if (logChannel) {
-      const embed = log(target.user.tag, message.author.tag);
+      const embed = log(`<@${target.id}>`, `<@${message.author.id}>`);
 
-      if (embed) {
-        embed.setDescription(
-          `**JAIL EVENT**\n• User\n> ${target.user.tag}\n• Action\n> unjailed\n• By\n> ${message.author.tag}`
-        );
+      embed.setDescription(
+        `**JAIL EVENT**\n• User\n> <@${target.id}>\n• Action\n> unjailed\n• By\n> <@${message.author.id}>`
+      );
 
-        logChannel.send({ embeds: [embed] }).catch(() => {});
-      }
+      logChannel.send({ embeds: [embed] }).catch(() => {});
     }
 
-    // 💬 command channel embed (NO COLOR)
-    return message.reply({
+    // 💬 main response (NO REPLY SYSTEM)
+    return message.channel.send({
       embeds: [
         {
-          description: `${target.user.tag} has been unjailed.`
+          description: `<@${target.id}> has been unjailed.`
         }
       ]
     });
