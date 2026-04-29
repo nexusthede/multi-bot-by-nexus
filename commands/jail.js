@@ -6,7 +6,6 @@ const {
 } = require("../utils/embeds/embedjail");
 
 const access = require("../config/access");
-const { isAllowed } = require("../utils/guards");
 
 module.exports = {
   name: "jail",
@@ -24,31 +23,38 @@ module.exports = {
     if (!target)
       return message.channel.send({ embeds: [fail("No user mentioned")] });
 
-    // ⚖ guard (admins + owners only)
-    if (!isAllowed(message.member, access))
+    // ⚖ permission check
+    if (!message.member.roles.cache.some(r => access.admin?.includes(r.id)))
       return message.channel.send({ embeds: [permission()] });
 
     // ❌ self jail
     if (target.id === message.author.id)
       return message.channel.send({ embeds: [fail("You cannot jail yourself")] });
 
+    // ❌ role missing safety check
+    if (!jailRole)
+      return message.channel.send({ embeds: [fail("Jail role not found")] });
+
     // ❌ already jailed
     if (target.roles.cache.has(jailRole.id))
       return message.channel.send({ embeds: [fail("User is already jailed")] });
 
-    // 🔒 jail role
-    await target.roles.add(jailRole).catch(() => {
+    // 🔒 jail role (NOW WITH REAL ERROR LOGGING)
+    try {
+      await target.roles.add(jailRole);
+    } catch (err) {
+      console.log("JAIL ERROR:", err);
       return message.channel.send({ embeds: [fail("Failed to jail user")] });
-    });
+    }
 
-    // 📜 logs (UNCHANGED SYSTEM)
+    // 📜 logs
     if (logChannel) {
       logChannel.send({
         embeds: [log(`<@${target.id}>`, `<@${message.author.id}>`)]
-      }).catch(() => {});
+      }).catch(err => console.log("LOG ERROR:", err));
     }
 
-    // 💬 main response (NO REPLY)
+    // 💬 response
     return message.channel.send({
       embeds: [
         jailed(target.id, message.author.id)
