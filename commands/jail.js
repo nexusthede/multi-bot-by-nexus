@@ -6,6 +6,7 @@ const {
 } = require("../utils/embeds/embedjail");
 
 const access = require("../config/access");
+const { isAllowed } = require("../utils/guards");
 
 module.exports = {
   name: "jail",
@@ -21,40 +22,36 @@ module.exports = {
 
     // ❌ no user
     if (!target)
-      return message.reply({ embeds: [fail("No user mentioned")] });
+      return message.channel.send({ embeds: [fail("No user mentioned")] });
 
-    // ⚖ admin only
-    if (!message.member.roles.cache.some(r => access.admin.includes(r.id)))
-      return message.reply({ embeds: [permission()] });
+    // ⚖ guard (admins + owners only)
+    if (!isAllowed(message.member, access))
+      return message.channel.send({ embeds: [permission()] });
 
-    // ❌ self
+    // ❌ self jail
     if (target.id === message.author.id)
-      return message.reply({ embeds: [fail("You cannot jail yourself")] });
+      return message.channel.send({ embeds: [fail("You cannot jail yourself")] });
 
     // ❌ already jailed
     if (target.roles.cache.has(jailRole.id))
-      return message.reply({ embeds: [fail("User is already jailed")] });
+      return message.channel.send({ embeds: [fail("User is already jailed")] });
 
     // 🔒 jail role
     await target.roles.add(jailRole).catch(() => {
-      return message.reply({ embeds: [fail("Failed to jail user")] });
+      return message.channel.send({ embeds: [fail("Failed to jail user")] });
     });
 
-    // 📜 logs (UNCHANGED)
+    // 📜 logs (UNCHANGED SYSTEM)
     if (logChannel) {
       logChannel.send({
-        embeds: [log(target.user.tag, message.author.tag)]
+        embeds: [log(`<@${target.id}>`, `<@${message.author.id}>`)]
       }).catch(() => {});
     }
 
-    // ❌ jail channel removed completely
-
-    // 💬 embed in command channel
-    return message.reply({
+    // 💬 main response (NO REPLY)
+    return message.channel.send({
       embeds: [
-        {
-          description: `${target.user.tag} has been jailed.`
-        }
+        jailed(target.id, message.author.id)
       ]
     });
   }
