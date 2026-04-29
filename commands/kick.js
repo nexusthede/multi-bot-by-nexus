@@ -1,22 +1,64 @@
-const { actionEmbed, failEmbed, permissionEmbed } = require("../utils/embeds");
-const { PermissionsBitField } = require("discord.js");
+const access = require("../config/access");
+
+const {
+  fail,
+  permission,
+  hierarchyUser,
+  hierarchyBot,
+  success
+} = require("../utils/embeds/embedmod");
+
+const {
+  hasAccess,
+  isProtected,
+  checkHierarchy
+} = require("../utils/guards");
 
 module.exports = {
   name: "kick",
-  aliases: ["k"],
 
   async execute(message, args) {
     const target = message.mentions.members.first();
+
+    // no user
     if (!target)
-      return message.reply({ embeds: [failEmbed("Mention a user")] });
+      return message.reply({
+        embeds: [fail("No user mentioned")]
+      });
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-      return message.reply({ embeds: [permissionEmbed("Kick Members")] });
+    // permission check
+    if (!hasAccess(message.member, access.mod))
+      return message.reply({
+        embeds: [permission("Kick Members")]
+      });
 
+    // protected system
+    if (isProtected(target))
+      return message.reply({
+        embeds: [fail("This user is protected")]
+      });
+
+    // hierarchy check
+    const check = checkHierarchy(message, target);
+
+    if (check === "USER")
+      return message.reply({
+        embeds: [hierarchyUser(target)]
+      });
+
+    if (check === "BOT")
+      return message.reply({
+        embeds: [hierarchyBot(target)]
+      });
+
+    // action
     await target.kick();
 
+    // success
     return message.reply({
-      embeds: [actionEmbed("kick", target, message.author)]
+      embeds: [
+        success(`${target.user.tag} was kicked by ${message.author.tag}`)
+      ]
     });
   }
 };
