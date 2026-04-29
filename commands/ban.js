@@ -16,6 +16,7 @@ const {
 
 module.exports = {
   name: "ban",
+  aliases: ["b", "banish"],
 
   async execute(message) {
     const target = message.mentions.members.first();
