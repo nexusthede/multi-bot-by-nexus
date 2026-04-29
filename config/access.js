@@ -1,7 +1,7 @@
 module.exports = {
   // 👑 Owners (full control)
   owner: [
-    "OWNER_ROLE_ID_1",
+    "1449945270782525502",
     "OWNER_ROLE_ID_2"
   ],
 
