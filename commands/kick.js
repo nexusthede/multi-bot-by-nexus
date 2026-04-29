@@ -42,7 +42,7 @@ module.exports = {
 
     return message.reply({
       embeds: [
-        success(`${target.user.tag} was kicked by ${message.author.tag}`)
+        success(`> <@${target.id}> was kicked by <@${message.author.id}>`)
       ]
     });
   }
