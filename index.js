@@ -41,10 +41,12 @@ const client = new Client({
 client.commands = new Collection();
 
 // =========================
-// LOAD COMMANDS (FIXED)
+// LOAD COMMANDS
 // =========================
 const commandPath = path.join(__dirname, "commands");
-const commandFiles = fs.readdirSync(commandPath).filter(f => f.endsWith(".js"));
+const commandFiles = fs
+  .readdirSync(commandPath)
+  .filter(f => f.endsWith(".js"));
 
 console.log("📦 Loading commands...");
 
@@ -61,7 +63,7 @@ for (const file of commandFiles) {
     console.log(`✅ Loaded: ${command.name}`);
 
   } catch (err) {
-    console.error(`❌ Error loading ${file}:`, err.message);
+    console.error(`❌ Error loading ${file}:`, err);
   }
 }
 
@@ -89,7 +91,7 @@ client.once("ready", () => {
 const cooldown = new Map();
 
 // =========================
-// MESSAGE HANDLER (FIXED + ALIASES)
+// MESSAGE HANDLER
 // =========================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
@@ -103,7 +105,7 @@ client.on("messageCreate", async (message) => {
   // MAIN COMMAND
   let command = client.commands.get(commandName);
 
-  // ALIAS SUPPORT
+  // ALIASES
   if (!command) {
     command = client.commands.find(cmd =>
       Array.isArray(cmd.aliases) &&
@@ -116,6 +118,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
+  // COOLDOWN
   const key = `${message.author.id}-${commandName}`;
   const now = Date.now();
 
@@ -124,11 +127,25 @@ client.on("messageCreate", async (message) => {
   cooldown.set(key, now + 1500);
   setTimeout(() => cooldown.delete(key), 1500);
 
+  // EXECUTION
   try {
     await command.execute(message, args, client);
+
   } catch (err) {
-    console.error(`❌ Command error (${commandName}):`, err);
-    message.reply("❌ Something went wrong.");
+    console.error(`Command error (${commandName}):`, err);
+
+    message.reply({
+      embeds: [
+        {
+          color: 0xE74C3C,
+          description:
+            `**COMMAND FAILED**\n` +
+            `• Command\n> ${commandName}\n` +
+            `• Status\n> Execution error`,
+          timestamp: new Date()
+        }
+      ]
+    }).catch(() => {});
   }
 });
 
