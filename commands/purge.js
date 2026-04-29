@@ -17,18 +17,18 @@ module.exports = {
 
     if (!amount || amount < 1 || amount > 100)
       return message.reply({
-        embeds: [fail("Provide a number between 1-100")]
+        embeds: [fail("> Provide a number between 1-100")]
       });
 
     if (!hasAccess(message.member, access.admin))
       return message.reply({
-        embeds: [permission("Administrator")]
+        embeds: [permission("> Administrator")]
       });
 
     await message.channel.bulkDelete(amount, true);
 
     return message.reply({
-      embeds: [success(`Deleted ${amount} messages`)]
+      embeds: [success(`> Deleted ${amount} messages`)]
     });
   }
 };
