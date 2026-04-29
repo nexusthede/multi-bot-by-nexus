@@ -1,5 +1,6 @@
 const access = require("../config/access");
 const { lock, fail, permission } = require("../utils/embeds/embedchannels");
+const { PermissionsBitField } = require("discord.js");
 
 module.exports = {
   name: "lock",
@@ -13,10 +14,16 @@ module.exports = {
 
     if (!isOwner && !isAdmin) return;
 
+    if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+      return message.channel.send({
+        embeds: [fail("Bot missing Manage Channels permission")]
+      });
+    }
+
     const channel = message.channel;
 
     await channel.permissionOverwrites.edit(
-      message.guild.roles.everyone.id,
+      message.guild.roles.everyone,
       { SendMessages: false }
     ).catch(() => {});
 
