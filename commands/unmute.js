@@ -22,13 +22,13 @@ module.exports = {
     const target = message.mentions.members.first();
 
     if (!target)
-      return message.reply({ embeds: [fail("No user mentioned")] });
+      return message.reply({ embeds: [fail("> No user mentioned")] });
 
     if (!hasAccess(message.member, access.mod))
-      return message.reply({ embeds: [permission("Moderate Members")] });
+      return message.reply({ embeds: [permission("> Moderate Members")] });
 
     if (isProtected(target))
-      return message.reply({ embeds: [fail("This user is protected")] });
+      return message.reply({ embeds: [fail("> This user is protected")] });
 
     const check = checkHierarchy(message, target);
 
@@ -42,7 +42,7 @@ module.exports = {
 
     return message.reply({
       embeds: [
-        success(`${target.user.tag} was unmuted by ${message.author.tag}`)
+        success(`> <@${target.id}> was unmuted by <@${message.author.id}>`)
       ]
     });
   }
