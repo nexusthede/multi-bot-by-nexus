@@ -1,10 +1,12 @@
 const { EmbedBuilder } = require("discord.js");
 const colors = require("./colors");
 
+// ⏰ FIXED TIME FORMAT (stable + consistent everywhere)
 const time = () =>
-  new Date().toLocaleTimeString([], {
+  new Date().toLocaleTimeString("en-US", {
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    hour12: true
   });
 
 const base = (desc) =>
@@ -25,19 +27,19 @@ const permission = (perm = "Permission") =>
     `**ACCESS DENIED**\n• Required\n> ${perm}`
   );
 
-// 🔒 SUCCESS (no tag, only formatted text)
+// 🔒 SUCCESS
 const success = (msg) =>
   base(
     `**SUCCESS**\n• Action\n> ${msg}`
   );
 
-// ⚖ HIERARCHY USER (FIXED MENTION)
+// ⚖ HIERARCHY USER
 const hierarchyUser = (target) =>
   base(
     `**HIERARCHY BLOCKED**\n• Target\n> <@${target.id}>\n• Status\n> Higher role`
   );
 
-// 🤖 HIERARCHY BOT (FIXED MENTION)
+// 🤖 HIERARCHY BOT
 const hierarchyBot = (target) =>
   base(
     `**HIERARCHY BLOCKED**\n• Target\n> <@${target.id}>\n• Status\n> Bot role too low`
