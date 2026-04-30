@@ -34,10 +34,10 @@ module.exports = {
   // 🆘 Support
   support: [],
 
-  // 👀 Trainee
+  // 👀 Trainees
   trainee: [],
 
-  // 🛡 Protected roles (immune from moderation)
+  // 🛡 Protected (immune)
   protected: [
     "1449945270782525502",
     "1466497373776908353",
