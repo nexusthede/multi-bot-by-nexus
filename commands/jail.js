@@ -24,15 +24,22 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🔐 PERMISSION CHECK (NOW CENTRALIZED)
+    // 🔐 PERMISSION CHECK
     if (!canUse(message.member, "jail"))
       return message.channel.send({
         embeds: [permission("Admin / SrMod Access Required")]
       });
 
+    // ⚠ SELF JAIL PREVENTION
     if (target.id === message.author.id)
       return message.channel.send({
         embeds: [fail("You cannot jail yourself")]
+      });
+
+    // ⚠ BOT HIERARCHY CHECK (IMPORTANT FIX)
+    if (target.roles.highest.position >= message.guild.members.me.roles.highest.position)
+      return message.channel.send({
+        embeds: [fail("My role is too low to jail this user")]
       });
 
     if (!jailRole)
@@ -54,7 +61,7 @@ module.exports = {
       });
     }
 
-    // 📜 LOGS
+    // 📜 LOGS (UNCHANGED)
     if (logChannel) {
       logChannel.send({
         embeds: [
