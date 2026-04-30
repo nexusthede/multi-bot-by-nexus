@@ -1,18 +1,18 @@
-const access = require("../config/access");
-
 const {
   fail,
   permission,
   success
 } = require("../utils/embeds/embedmod");
 
-const { hasAccess } = require("../utils/guards");
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "purge",
   aliases: ["clear", "clean"],
 
   async execute(message, args) {
+    if (!message.guild || message.author.bot) return;
+
     const amount = parseInt(args[0]);
 
     if (!amount || amount < 1 || amount > 100)
@@ -20,17 +20,19 @@ module.exports = {
         embeds: [fail("Provide a number between 1-100")]
       });
 
-    // 🔒 ONLY OWNER / ADMIN / SRMOD
-    if (
-      !hasAccess(message.member, access.owner) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.srmod)
-    )
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "purge"))
       return message.channel.send({
         embeds: [permission("Admin / SrMod Access Required")]
       });
 
-    await message.channel.bulkDelete(amount, true);
+    try {
+      await message.channel.bulkDelete(amount, true);
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to delete messages (messages may be too old)")]
+      });
+    }
 
     return message.channel.send({
       embeds: [success(`Deleted ${amount} messages`)]
