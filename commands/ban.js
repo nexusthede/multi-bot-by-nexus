@@ -26,7 +26,7 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 GLOBAL STAFF CHECK (your system)
+    // 🛠 STAFF CHECK (cleaned but same logic)
     if (
       !hasAccess(message.member, access.mod) &&
       !hasAccess(message.member, access.srmod) &&
