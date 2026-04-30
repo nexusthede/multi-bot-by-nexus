@@ -1,5 +1,3 @@
-const access = require("../config/access");
-
 const {
   fail,
   permission,
@@ -7,16 +5,19 @@ const {
 } = require("../utils/embeds/embedrole");
 
 const {
-  hasAccess,
   isProtected,
   checkHierarchy
 } = require("../utils/guards");
+
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "removerole",
   aliases: ["rr"],
 
   async execute(message) {
+    if (!message.guild || message.author.bot) return;
+
     const target = message.mentions.members.first();
     const role = message.mentions.roles.first();
 
@@ -25,13 +26,16 @@ module.exports = {
         embeds: [fail("Usage: .removerole @user @role")]
       });
 
-    if (
-      !hasAccess(message.member, access.owner) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.srmod)
-    )
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "removerole"))
       return message.channel.send({
         embeds: [permission("Owner / Admin / Sr Mod Only")]
+      });
+
+    // ⚠ BOT PERMISSION CHECK
+    if (!message.guild.members.me.permissions.has("ManageRoles"))
+      return message.channel.send({
+        embeds: [fail("Bot missing Manage Roles permission")]
       });
 
     if (isProtected(target))
@@ -51,7 +55,13 @@ module.exports = {
         embeds: [fail("Bot role is too low")]
       });
 
-    await target.roles.remove(role);
+    try {
+      await target.roles.remove(role);
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to remove role")]
+      });
+    }
 
     return message.channel.send({
       embeds: [roleRemoved(target, role)]
