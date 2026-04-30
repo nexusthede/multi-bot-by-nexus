@@ -5,7 +5,7 @@ const {
 } = require("../utils/embeds/embedjail");
 
 const access = require("../config/access");
-const colors = require("../utils/embeds/colors");
+const { isAllowed } = require("../utils/guards");
 
 module.exports = {
   name: "unjail",
@@ -19,24 +19,37 @@ module.exports = {
     const jailRole = message.guild.roles.cache.get("1492118672267939861");
     const logChannel = message.guild.channels.cache.get("1497815554956853359");
 
-    // ❌ no user
     if (!target)
-      return message.channel.send({ embeds: [fail("No user mentioned")] });
+      return message.channel.send({
+        embeds: [fail("No user mentioned")]
+      });
 
-    // ⚖ access check (admins/owners only)
-    if (!message.member.roles.cache.some(r => access.admin.includes(r.id)))
-      return message.channel.send({ embeds: [permission()] });
+    // 🛠 OWNER / ADMIN ACCESS ONLY (consistent with jail.js)
+    if (!isAllowed(message.member, access))
+      return message.channel.send({
+        embeds: [permission("Owner / Admin Access Required")]
+      });
 
-    // ❌ not jailed
+    if (!jailRole)
+      return message.channel.send({
+        embeds: [fail("Jail role not found")]
+      });
+
     if (!target.roles.cache.has(jailRole.id))
-      return message.channel.send({ embeds: [fail("User is not jailed")] });
+      return message.channel.send({
+        embeds: [fail("User is not jailed")]
+      });
 
-    // 🔓 remove jail role
-    await target.roles.remove(jailRole).catch(() => {
-      return message.channel.send({ embeds: [fail("Failed to unjail user")] });
-    });
+    try {
+      await target.roles.remove(jailRole);
+    } catch (err) {
+      console.log("UNJAIL ERROR:", err);
+      return message.channel.send({
+        embeds: [fail("Failed to unjail user")]
+      });
+    }
 
-    // 📜 logs (UNCHANGED SYSTEM)
+    // 📜 LOGS
     if (logChannel) {
       const embed = log(`<@${target.id}>`, `<@${message.author.id}>`);
 
@@ -47,11 +60,10 @@ module.exports = {
       logChannel.send({ embeds: [embed] }).catch(() => {});
     }
 
-    // 💬 main response (FIXED COLOR SYSTEM)
+    // 💬 RESPONSE (clean + consistent system)
     return message.channel.send({
       embeds: [
         {
-          color: colors.main,
           description: `> <@${target.id}> has been unjailed.`
         }
       ]
