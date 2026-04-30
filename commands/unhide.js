@@ -1,6 +1,6 @@
-const access = require("../config/access");
-const { unhide, fail } = require("../utils/embeds/embedchannels");
+const { unhide, fail, permission } = require("../utils/embeds/embedchannels");
 const { PermissionsBitField } = require("discord.js");
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "unhide",
@@ -9,12 +9,16 @@ module.exports = {
   async execute(message) {
     if (!message.guild || message.author.bot) return;
 
-    const isOwner = access.owner?.some(id => message.member.roles.cache.has(id));
-    const isAdmin = access.admin?.some(id => message.member.roles.cache.has(id));
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "hide"))
+      return message.channel.send({
+        embeds: [permission("Admin only")]
+      });
 
-    if (!isOwner && !isAdmin) return;
-
-    if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+    // ⚠ bot permission check
+    if (!message.guild.members.me.permissions.has(
+      PermissionsBitField.Flags.ManageChannels
+    )) {
       return message.channel.send({
         embeds: [fail("Bot missing Manage Channels permission")]
       });
@@ -22,10 +26,16 @@ module.exports = {
 
     const channel = message.channel;
 
-    await channel.permissionOverwrites.edit(
-      message.guild.roles.everyone,
-      { ViewChannel: true }
-    ).catch(() => {});
+    try {
+      await channel.permissionOverwrites.edit(
+        message.guild.roles.everyone,
+        { ViewChannel: true }
+      );
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to unhide channel")]
+      });
+    }
 
     return message.channel.send({
       embeds: [unhide(channel.id)]
