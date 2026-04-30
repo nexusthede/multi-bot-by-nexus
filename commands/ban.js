@@ -1,5 +1,3 @@
-const access = require("../config/access");
-
 const {
   fail,
   permission,
@@ -9,10 +7,11 @@ const {
 } = require("../utils/embeds/embedmod");
 
 const {
-  hasAccess,
   isProtected,
   checkHierarchy
 } = require("../utils/guards");
+
+const { canUse } = require("../utils/moderation");
 
 module.exports = {
   name: "ban",
@@ -26,20 +25,10 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 CLEAN STAFF CHECK (FIXED)
-    const staff =
-      access.mod
-        .concat(
-          access.srmod,
-          access.admin,
-          access.trialmod,
-          access.helper,
-          access.support
-        );
-
-    if (!hasAccess(message.member, staff))
+    // 🔐 CLEAN PERMISSION CHECK
+    if (!canUse(message.member, "ban"))
       return message.channel.send({
-        embeds: [permission("Staff Access Required")]
+        embeds: [permission("Admin / SrMod only")]
       });
 
     if (isProtected(target))
