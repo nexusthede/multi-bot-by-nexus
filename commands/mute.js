@@ -36,9 +36,17 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    if (!hasAccess(message.member, access.mod))
+    // 🛠 GLOBAL STAFF CHECK
+    if (
+      !hasAccess(message.member, access.mod) &&
+      !hasAccess(message.member, access.srmod) &&
+      !hasAccess(message.member, access.admin) &&
+      !hasAccess(message.member, access.trialmod) &&
+      !hasAccess(message.member, access.helper) &&
+      !hasAccess(message.member, access.support)
+    )
       return message.channel.send({
-        embeds: [permission("Moderate Members")]
+        embeds: [permission("Staff Access Required")]
       });
 
     if (isProtected(target))
@@ -62,7 +70,7 @@ module.exports = {
 
     return message.channel.send({
       embeds: [
-        success(`> ${target.user.tag} was muted by ${message.author.tag}`)
+        success(`<@${target.id}> was muted by <@${message.author.id}>`)
       ]
     });
   }
