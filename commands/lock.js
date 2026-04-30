@@ -26,10 +26,16 @@ module.exports = {
 
     const channel = message.channel;
 
-    await channel.permissionOverwrites.edit(
-      message.guild.roles.everyone,
-      { SendMessages: false }
-    ).catch(() => {});
+    try {
+      await channel.permissionOverwrites.edit(
+        message.guild.roles.everyone,
+        { SendMessages: false }
+      );
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to lock channel")]
+      });
+    }
 
     return message.channel.send({
       embeds: [lock(channel.id)]
