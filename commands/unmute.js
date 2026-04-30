@@ -1,5 +1,3 @@
-const access = require("../config/access");
-
 const {
   fail,
   permission,
@@ -9,16 +7,19 @@ const {
 } = require("../utils/embeds/embedmod");
 
 const {
-  hasAccess,
   isProtected,
   checkHierarchy
 } = require("../utils/guards");
+
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "unmute",
   aliases: ["um", "untimeout"],
 
   async execute(message) {
+    if (!message.guild || message.author.bot) return;
+
     const target = message.mentions.members.first();
 
     if (!target)
@@ -26,17 +27,16 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 GLOBAL STAFF CHECK
-    if (
-      !hasAccess(message.member, access.mod) &&
-      !hasAccess(message.member, access.srmod) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.trialmod) &&
-      !hasAccess(message.member, access.helper) &&
-      !hasAccess(message.member, access.support)
-    )
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "mute"))
       return message.channel.send({
         embeds: [permission("Staff Access Required")]
+      });
+
+    // ⚠ BOT PERMISSION CHECK
+    if (!message.guild.members.me.permissions.has("ModerateMembers"))
+      return message.channel.send({
+        embeds: [fail("Bot missing Timeout Members permission")]
       });
 
     if (isProtected(target))
@@ -56,7 +56,13 @@ module.exports = {
         embeds: [hierarchyBot(target)]
       });
 
-    await target.timeout(null);
+    try {
+      await target.timeout(null);
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to unmute user")]
+      });
+    }
 
     return message.channel.send({
       embeds: [
