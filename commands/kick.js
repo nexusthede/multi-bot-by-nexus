@@ -26,10 +26,17 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛡 staff access (now includes owner via guards.js)
-    if (!hasAccess(message.member, access.mod))
+    // 🛠 GLOBAL STAFF CHECK (same as ban.js style)
+    if (
+      !hasAccess(message.member, access.mod) &&
+      !hasAccess(message.member, access.srmod) &&
+      !hasAccess(message.member, access.admin) &&
+      !hasAccess(message.member, access.trialmod) &&
+      !hasAccess(message.member, access.helper) &&
+      !hasAccess(message.member, access.support)
+    )
       return message.channel.send({
-        embeds: [permission("Kick Members")]
+        embeds: [permission("Staff Access Required")]
       });
 
     if (isProtected(target))
@@ -53,7 +60,7 @@ module.exports = {
 
     return message.channel.send({
       embeds: [
-        success(`> ${target.user.tag} was kicked by ${message.author.tag}`)
+        success(`<@${target.id}> was kicked by <@${message.author.id}>`)
       ]
     });
   }
