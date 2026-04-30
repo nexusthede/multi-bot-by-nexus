@@ -16,19 +16,24 @@ module.exports = {
     const amount = parseInt(args[0]);
 
     if (!amount || amount < 1 || amount > 100)
-      return message.reply({
-        embeds: [fail("> Provide a number between 1-100")]
+      return message.channel.send({
+        embeds: [fail("Provide a number between 1-100")]
       });
 
-    if (!hasAccess(message.member, access.admin))
-      return message.reply({
-        embeds: [permission("> Administrator")]
+    // 🔒 ONLY OWNER / ADMIN / SRMOD
+    if (
+      !hasAccess(message.member, access.owner) &&
+      !hasAccess(message.member, access.admin) &&
+      !hasAccess(message.member, access.srmod)
+    )
+      return message.channel.send({
+        embeds: [permission("Admin / SrMod Access Required")]
       });
 
     await message.channel.bulkDelete(amount, true);
 
-    return message.reply({
-      embeds: [success(`> Deleted ${amount} messages`)]
+    return message.channel.send({
+      embeds: [success(`Deleted ${amount} messages`)]
     });
   }
 };
