@@ -26,15 +26,18 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 STAFF CHECK (cleaned but same logic)
-    if (
-      !hasAccess(message.member, access.mod) &&
-      !hasAccess(message.member, access.srmod) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.trialmod) &&
-      !hasAccess(message.member, access.helper) &&
-      !hasAccess(message.member, access.support)
-    )
+    // 🛠 CLEAN STAFF CHECK (FIXED)
+    const staff =
+      access.mod
+        .concat(
+          access.srmod,
+          access.admin,
+          access.trialmod,
+          access.helper,
+          access.support
+        );
+
+    if (!hasAccess(message.member, staff))
       return message.channel.send({
         embeds: [permission("Staff Access Required")]
       });
