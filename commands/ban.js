@@ -21,25 +21,29 @@ module.exports = {
   async execute(message) {
     const target = message.mentions.members.first();
 
-    // ❌ no user
     if (!target)
       return message.channel.send({
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛡 permission check (handled by guards.js)
-    if (!hasAccess(message.member, access.mod))
+    // 🛠 GLOBAL STAFF CHECK (your system)
+    if (
+      !hasAccess(message.member, access.mod) &&
+      !hasAccess(message.member, access.srmod) &&
+      !hasAccess(message.member, access.admin) &&
+      !hasAccess(message.member, access.trialmod) &&
+      !hasAccess(message.member, access.helper) &&
+      !hasAccess(message.member, access.support)
+    )
       return message.channel.send({
-        embeds: [permission("Ban Members")]
+        embeds: [permission("Staff Access Required")]
       });
 
-    // 🛡 protected check
     if (isProtected(target))
       return message.channel.send({
         embeds: [fail("This user is protected")]
       });
 
-    // ⚖ hierarchy check
     const check = checkHierarchy(message, target);
 
     if (check === "USER")
@@ -52,15 +56,11 @@ module.exports = {
         embeds: [hierarchyBot(target)]
       });
 
-    // 🔨 action
     await target.ban();
 
-    // ✅ success (clickable mentions)
     return message.channel.send({
       embeds: [
-        success(
-          `<@${target.id}> was banned by <@${message.author.id}>`
-        )
+        success(`<@${target.id}> was banned by <@${message.author.id}>`)
       ]
     });
   }
