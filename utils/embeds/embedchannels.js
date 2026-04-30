@@ -5,25 +5,25 @@ const colors = require("./colors");
 function lock(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`<#${channelId}> has been locked`);
+    .setDescription(`> <#${channelId}> has been locked`);
 }
 
 function unlock(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`<#${channelId}> has been unlocked`);
+    .setDescription(`> <#${channelId}> has been unlocked`);
 }
 
 function hide(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`<#${channelId}> is now hidden`);
+    .setDescription(`> <#${channelId}> is now hidden`);
 }
 
 function unhide(channelId) {
   return new EmbedBuilder()
     .setColor(colors.main)
-    .setDescription(`<#${channelId}> is now visible`);
+    .setDescription(`> <#${channelId}> is now visible`);
 }
 
 // ❌ FAIL
