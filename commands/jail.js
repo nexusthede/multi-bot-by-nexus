@@ -5,8 +5,7 @@ const {
   log
 } = require("../utils/embeds/embedjail");
 
-const access = require("../config/access");
-const { isAllowed } = require("../utils/guards");
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "jail",
@@ -25,10 +24,10 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 OWNER / ADMIN ONLY CHECK (your system)
-    if (!isAllowed(message.member, access))
+    // 🔐 PERMISSION CHECK (NOW CENTRALIZED)
+    if (!canUse(message.member, "jail"))
       return message.channel.send({
-        embeds: [permission("Owner / Admin Access Required")]
+        embeds: [permission("Admin / SrMod Access Required")]
       });
 
     if (target.id === message.author.id)
@@ -64,7 +63,7 @@ module.exports = {
       }).catch(err => console.log("LOG ERROR:", err));
     }
 
-    // 💬 RESPONSE (clean embed system)
+    // 💬 RESPONSE
     return message.channel.send({
       embeds: [
         jailed(`<@${target.id}> has been jailed`)
