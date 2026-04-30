@@ -2,19 +2,33 @@ const access = require("../config/access");
 
 // 🛡 check if target is protected
 function isProtected(target) {
-  if (!target || !target.roles) return false;
+  if (!target?.roles) return false;
 
   return target.roles.cache.some(role =>
     access.protected.includes(role.id)
   );
 }
 
-// ⚖ check staff access (OWNER + COOWNER bypass)
+// ⚖ check staff access (ROLE-BASED ONLY)
 function hasAccess(member, roleList = []) {
   if (!member) return false;
 
-  if (access.owner.includes(member.id)) return true;
-  if (access.coowner.includes(member.id)) return true;
+  // 👑 OWNER bypass (role-based)
+  const isOwner = member.roles.cache.some(role =>
+    access.owner.includes(role.id)
+  );
+
+  if (isOwner) return true;
+
+  // 🧠 CO-OWNER bypass
+  const isCoOwner = member.roles.cache.some(role =>
+    access.coowner.includes(role.id)
+  );
+
+  if (isCoOwner) return true;
+
+  // 🛠 safe role check
+  if (!Array.isArray(roleList)) return false;
 
   return member.roles.cache.some(role =>
     roleList.includes(role.id)
