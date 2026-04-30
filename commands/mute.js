@@ -1,5 +1,3 @@
-const access = require("../config/access");
-
 const {
   fail,
   permission,
@@ -9,44 +7,63 @@ const {
 } = require("../utils/embeds/embedmod");
 
 const {
-  hasAccess,
   isProtected,
   checkHierarchy
 } = require("../utils/guards");
+
+const { canUse } = require("../utils/perms");
+
+// ⏱ duration parser
+function parseDuration(input) {
+  if (!input) return 10 * 60 * 1000; // default 10m
+
+  const match = input.toLowerCase().match(/^(\d+)(m|h|d)$/);
+  if (!match) return null;
+
+  const value = parseInt(match[1]);
+  const unit = match[2];
+
+  switch (unit) {
+    case "m": return value * 60 * 1000;
+    case "h": return value * 60 * 60 * 1000;
+    case "d": return value * 24 * 60 * 60 * 1000;
+    default: return null;
+  }
+}
 
 module.exports = {
   name: "mute",
   aliases: ["timeout", "tm"],
 
   async execute(message, args) {
-    const target = message.mentions.members.first();
-    const duration = args[1];
+    if (!message.guild || message.author.bot) return;
 
-    const ms =
-      duration?.endsWith("m")
-        ? parseInt(duration) * 60 * 1000
-        : duration?.endsWith("h")
-        ? parseInt(duration) * 60 * 60 * 1000
-        : duration?.endsWith("d")
-        ? parseInt(duration) * 24 * 60 * 60 * 1000
-        : 10 * 60 * 1000;
+    const target = message.mentions.members.first();
+    const durationInput = args[1];
 
     if (!target)
       return message.channel.send({
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 GLOBAL STAFF CHECK
-    if (
-      !hasAccess(message.member, access.mod) &&
-      !hasAccess(message.member, access.srmod) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.trialmod) &&
-      !hasAccess(message.member, access.helper) &&
-      !hasAccess(message.member, access.support)
-    )
+    // 🔐 permission check
+    if (!canUse(message.member, "mute"))
       return message.channel.send({
         embeds: [permission("Staff Access Required")]
+      });
+
+    const ms = parseDuration(durationInput);
+
+    if (ms === null)
+      return message.channel.send({
+        embeds: [fail("Invalid duration. Use 10m, 2h, 1d")]
+      });
+
+    // ⚠ Discord max timeout = 28 days
+    const max = 28 * 24 * 60 * 60 * 1000;
+    if (ms > max)
+      return message.channel.send({
+        embeds: [fail("Maximum timeout is 28 days")]
       });
 
     if (isProtected(target))
@@ -70,7 +87,7 @@ module.exports = {
 
     return message.channel.send({
       embeds: [
-        success(`<@${target.id}> was muted by <@${message.author.id}>`)
+        success(`<@${target.id}> was muted for ${durationInput || "10m"} by <@${message.author.id}>`)
       ]
     });
   }
