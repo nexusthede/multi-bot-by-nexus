@@ -23,38 +23,42 @@ module.exports = {
     const target = message.mentions.members.first();
     const reason = args.slice(1).join(" ") || "No reason provided";
 
-    // ❌ no user
     if (!target)
-      return message.reply({
-        embeds: [fail("> No user mentioned")]
+      return message.channel.send({
+        embeds: [fail("No user mentioned")]
       });
 
-    // ⚖ staff only
-    if (!hasAccess(message.member, access.mod))
-      return message.reply({
-        embeds: [permission("> Staff only")]
+    // 🛠 GLOBAL STAFF CHECK
+    if (
+      !hasAccess(message.member, access.mod) &&
+      !hasAccess(message.member, access.srmod) &&
+      !hasAccess(message.member, access.admin) &&
+      !hasAccess(message.member, access.trialmod) &&
+      !hasAccess(message.member, access.helper) &&
+      !hasAccess(message.member, access.support)
+    )
+      return message.channel.send({
+        embeds: [permission("Staff Access Required")]
       });
 
-    // 🛡 protected
     if (isProtected(target))
-      return message.reply({
-        embeds: [fail("> This user is protected")]
+      return message.channel.send({
+        embeds: [fail("This user is protected")]
       });
 
-    // ⚖ hierarchy
     const check = checkHierarchy(message, target);
 
     if (check === "USER")
-      return message.reply({
+      return message.channel.send({
         embeds: [hierarchyUser(target)]
       });
 
     if (check === "BOT")
-      return message.reply({
+      return message.channel.send({
         embeds: [hierarchyBot(target)]
       });
 
-    // 📦 database
+    // 📦 DATABASE
     let data = await Warn.findOne({
       guildId: message.guild.id,
       userId: target.id
@@ -76,11 +80,10 @@ module.exports = {
 
     await data.save();
 
-    // ✅ success embed (FIXED MENTIONS + STYLE)
-    return message.reply({
+    return message.channel.send({
       embeds: [
         success(
-          `> <@${target.id}> was warned by <@${message.author.id}>\n• Reason:\n> ${reason}\n• Total warns:\n> ${data.warns.length}`
+          `<@${target.id}> was warned by <@${message.author.id}>\n• Reason: ${reason}\n• Total warns: ${data.warns.length}`
         )
       ]
     });
