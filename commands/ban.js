@@ -18,6 +18,8 @@ module.exports = {
   aliases: ["b", "banish"],
 
   async execute(message) {
+    if (!message.guild || message.author.bot) return;
+
     const target = message.mentions.members.first();
 
     if (!target)
@@ -25,15 +27,28 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🔐 CLEAN PERMISSION CHECK
+    // 🔐 PERMISSION CHECK
     if (!canUse(message.member, "ban"))
       return message.channel.send({
         embeds: [permission("Admin / SrMod only")]
       });
 
+    // 🛡 PROTECTION CHECK
     if (isProtected(target))
       return message.channel.send({
         embeds: [fail("This user is protected")]
+      });
+
+    // ⚠ BOT PERMISSION CHECK (IMPORTANT FIX)
+    if (!message.guild.members.me.permissions.has("BanMembers"))
+      return message.channel.send({
+        embeds: [fail("Bot missing Ban Members permission")]
+      });
+
+    // ⚠ SELF BAN PREVENTION
+    if (target.id === message.author.id)
+      return message.channel.send({
+        embeds: [fail("You cannot ban yourself")]
       });
 
     const check = checkHierarchy(message, target);
@@ -48,7 +63,14 @@ module.exports = {
         embeds: [hierarchyBot(target)]
       });
 
-    await target.ban();
+    // 🔥 ACTION (SAFE WRAPPED)
+    try {
+      await target.ban();
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to ban user")]
+      });
+    }
 
     return message.channel.send({
       embeds: [
