@@ -26,16 +26,26 @@ module.exports = {
         embeds: [permission("Admin / SrMod Access Required")]
       });
 
+    let deleted;
+
     try {
-      await message.channel.bulkDelete(amount, true);
+      deleted = await message.channel.bulkDelete(amount, true);
     } catch (err) {
       return message.channel.send({
         embeds: [fail("Failed to delete messages (messages may be too old)")]
       });
     }
 
-    return message.channel.send({
-      embeds: [success(`Deleted ${amount} messages`)]
+    // ⚠ safer count (Discord may not delete all)
+    const count = deleted?.size || amount;
+
+    const reply = await message.channel.send({
+      embeds: [success(`Deleted ${count} messages`)]
     });
+
+    // optional: auto delete confirmation after 3s (prevents clutter)
+    setTimeout(() => {
+      reply.delete().catch(() => {});
+    }, 3000);
   }
 };
