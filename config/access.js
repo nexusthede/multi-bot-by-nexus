@@ -5,60 +5,43 @@ module.exports = {
     "1466497373776908353"
   ],
 
-  // 🧠 Co Owners (optional top staff)
-  coowner: [
-    "CO_OWNER_ROLE_ID_1"
-  ],
+  // 🧠 Co Owners
+  coowner: [],
 
-  // 🛠 Admins (high-level moderation)
+  // 🛠 Admins
   admin: [
-    "1450022204657111155",
-    "ADMIN_ROLE_ID_2",
-    "ADMIN_ROLE_ID_3"
+    "1450022204657111155"
   ],
 
-  // ⚖ Senior Moderators (strong mod powers)
-  srmod: [
-    "SR_MOD_ROLE_ID_1",
-    "SR_MOD_ROLE_ID_2"
-  ],
+  // ⚖ Senior Moderators
+  srmod: [],
 
-  // 🛡 Moderators (standard moderation)
+  // 🛡 Moderators
   mod: [
-    "1465960511375151288",
-    "MOD_ROLE_ID_2",
-    "MOD_ROLE_ID_3"
+    "1465960511375151288"
   ],
 
-  // 🧪 Trial Moderators (limited access)
+  // 🧪 Trial Moderators
   trialmod: [
-    "1468316755847024730",
-    "TRIAL_MOD_ROLE_ID_2"
+    "1468316755847024730"
   ],
 
-  // 🎯 Helpers (basic support tools)
+  // 🎯 Helpers
   helper: [
-    "1468316715455614977",
-    "HELPER_ROLE_ID_2",
-    "HELPER_ROLE_ID_3"
+    "1468316715455614977"
   ],
 
-  // 🆘 Support Team (no punish power, only assistance)
-  support: [
-    "SUPPORT_ROLE_ID_1"
-  ],
+  // 🆘 Support
+  support: [],
 
-  // 👀 Staff-in-Training (very limited)
-  trainee: [
-    "TRAINEE_ROLE_ID_1"
-  ],
+  // 👀 Trainee
+  trainee: [],
 
   // 🛡 Protected roles (immune from moderation)
   protected: [
-    "14499452707825255021",
+    "1449945270782525502",
     "1466497373776908353",
     "1450022204657111155",
-    "ADMIN_ROLE_ID_1",
-    "HEAD_ADMIN_ROLE_ID"
+    "1450022713346490440"
   ]
 };
