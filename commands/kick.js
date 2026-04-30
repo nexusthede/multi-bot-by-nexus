@@ -1,5 +1,3 @@
-const access = require("../config/access");
-
 const {
   fail,
   permission,
@@ -9,10 +7,11 @@ const {
 } = require("../utils/embeds/embedmod");
 
 const {
-  hasAccess,
   isProtected,
   checkHierarchy
 } = require("../utils/guards");
+
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "kick",
@@ -26,15 +25,8 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 GLOBAL STAFF CHECK (same as ban.js style)
-    if (
-      !hasAccess(message.member, access.mod) &&
-      !hasAccess(message.member, access.srmod) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.trialmod) &&
-      !hasAccess(message.member, access.helper) &&
-      !hasAccess(message.member, access.support)
-    )
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "kick"))
       return message.channel.send({
         embeds: [permission("Staff Access Required")]
       });
