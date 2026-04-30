@@ -1,4 +1,3 @@
-const access = require("../config/access");
 const Warn = require("../models/warnmodel");
 
 const {
@@ -10,16 +9,19 @@ const {
 } = require("../utils/embeds/embedmod");
 
 const {
-  hasAccess,
   isProtected,
   checkHierarchy
 } = require("../utils/guards");
+
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "warn",
   aliases: ["w", "warning"],
 
   async execute(message, args) {
+    if (!message.guild || message.author.bot) return;
+
     const target = message.mentions.members.first();
     const reason = args.slice(1).join(" ") || "No reason provided";
 
@@ -28,17 +30,16 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 GLOBAL STAFF CHECK
-    if (
-      !hasAccess(message.member, access.mod) &&
-      !hasAccess(message.member, access.srmod) &&
-      !hasAccess(message.member, access.admin) &&
-      !hasAccess(message.member, access.trialmod) &&
-      !hasAccess(message.member, access.helper) &&
-      !hasAccess(message.member, access.support)
-    )
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "warn"))
       return message.channel.send({
         embeds: [permission("Staff Access Required")]
+      });
+
+    // ⚠ BOT HIERARCHY CHECK (SAFETY)
+    if (target.roles.highest.position >= message.guild.members.me.roles.highest.position)
+      return message.channel.send({
+        embeds: [fail("My role is too low to warn this user")]
       });
 
     if (isProtected(target))
