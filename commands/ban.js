@@ -11,7 +11,7 @@ const {
   checkHierarchy
 } = require("../utils/guards");
 
-const { canUse } = require("../utils/moderation");
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "ban",
