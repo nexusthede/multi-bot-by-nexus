@@ -4,8 +4,7 @@ const {
   log
 } = require("../utils/embeds/embedjail");
 
-const access = require("../config/access");
-const { isAllowed } = require("../utils/guards");
+const { canUse } = require("../utils/perms");
 
 module.exports = {
   name: "unjail",
@@ -24,8 +23,8 @@ module.exports = {
         embeds: [fail("No user mentioned")]
       });
 
-    // 🛠 OWNER / ADMIN ACCESS ONLY (consistent with jail.js)
-    if (!isAllowed(message.member, access))
+    // 🔐 CENTRAL PERMISSION CHECK
+    if (!canUse(message.member, "jail"))
       return message.channel.send({
         embeds: [permission("Owner / Admin Access Required")]
       });
@@ -49,7 +48,7 @@ module.exports = {
       });
     }
 
-    // 📜 LOGS
+    // 📜 LOGS (UNCHANGED)
     if (logChannel) {
       const embed = log(`<@${target.id}>`, `<@${message.author.id}>`);
 
@@ -60,7 +59,7 @@ module.exports = {
       logChannel.send({ embeds: [embed] }).catch(() => {});
     }
 
-    // 💬 RESPONSE (clean + consistent system)
+    // 💬 RESPONSE (UNCHANGED STYLE)
     return message.channel.send({
       embeds: [
         {
