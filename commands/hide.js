@@ -1,4 +1,4 @@
-const { hide, fail } = require("../utils/embeds/embedchannels");
+const { hide, fail, permission } = require("../utils/embeds/embedchannels");
 const { PermissionsBitField } = require("discord.js");
 const { canUse } = require("../utils/perms");
 
@@ -9,9 +9,11 @@ module.exports = {
   async execute(message) {
     if (!message.guild || message.author.bot) return;
 
-    // 🔐 permission check (NOW CENTRALIZED)
+    // 🔐 permission check (CENTRALIZED)
     if (!canUse(message.member, "hide"))
-      return;
+      return message.channel.send({
+        embeds: [permission("Admin only")]
+      });
 
     // ⚠ bot permission check
     if (!message.guild.members.me.permissions.has(
@@ -24,10 +26,16 @@ module.exports = {
 
     const channel = message.channel;
 
-    await channel.permissionOverwrites.edit(
-      message.guild.roles.everyone,
-      { ViewChannel: false }
-    ).catch(() => {});
+    try {
+      await channel.permissionOverwrites.edit(
+        message.guild.roles.everyone,
+        { ViewChannel: false }
+      );
+    } catch {
+      return message.channel.send({
+        embeds: [fail("Failed to hide channel")]
+      });
+    }
 
     return message.channel.send({
       embeds: [hide(channel.id)]
