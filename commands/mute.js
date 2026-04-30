@@ -13,22 +13,31 @@ const {
 
 const { canUse } = require("../utils/perms");
 
-// ⏱ duration parser
+// ⏱ ADVANCED duration parser (supports 6d 3h 20m)
 function parseDuration(input) {
-  if (!input) return 10 * 60 * 1000; // default 10m
+  if (!input || typeof input !== "string") return 10 * 60 * 1000;
 
-  const match = input.toLowerCase().match(/^(\d+)(m|h|d)$/);
-  if (!match) return null;
+  const regex = /(\d+)\s*(d|h|m)/g;
+  let match;
+  let ms = 0;
 
-  const value = parseInt(match[1]);
-  const unit = match[2];
+  const map = {
+    d: 24 * 60 * 60 * 1000,
+    h: 60 * 60 * 1000,
+    m: 60 * 1000
+  };
 
-  switch (unit) {
-    case "m": return value * 60 * 1000;
-    case "h": return value * 60 * 60 * 1000;
-    case "d": return value * 24 * 60 * 60 * 1000;
-    default: return null;
+  let found = false;
+
+  while ((match = regex.exec(input.toLowerCase())) !== null) {
+    const value = parseInt(match[1]);
+    const unit = match[2];
+
+    ms += value * map[unit];
+    found = true;
   }
+
+  return found ? ms : null;
 }
 
 module.exports = {
@@ -39,38 +48,38 @@ module.exports = {
     if (!message.guild || message.author.bot) return;
 
     const target = message.mentions.members.first();
-    const durationInput = args[1];
+    const durationInput = args.slice(1).join(" "); // supports multi-part input
 
     if (!target)
       return message.channel.send({
         embeds: [fail("No user mentioned")]
       });
 
-    // 🔐 permission check
+    // 🔐 PERMISSION CHECK
     if (!canUse(message.member, "mute"))
       return message.channel.send({
         embeds: [permission("Staff Access Required")]
       });
 
-    const ms = parseDuration(durationInput);
-
-    if (ms === null)
+    // ⚠ BOT PERMISSION CHECK
+    if (!message.guild.members.me.permissions.has("ModerateMembers"))
       return message.channel.send({
-        embeds: [fail("Invalid duration. Use 10m, 2h, 1d")]
+        embeds: [fail("Bot missing Timeout Members permission")]
       });
 
-    // ⚠ Discord max timeout = 28 days
-    const max = 28 * 24 * 60 * 60 * 1000;
-    if (ms > max)
+    // ⚠ SELF MUTE PREVENTION
+    if (target.id === message.author.id)
       return message.channel.send({
-        embeds: [fail("Maximum timeout is 28 days")]
+        embeds: [fail("You cannot mute yourself")]
       });
 
+    // 🛡 PROTECTION CHECK
     if (isProtected(target))
       return message.channel.send({
         embeds: [fail("This user is protected")]
       });
 
+    // ⚖ HIERARCHY CHECK
     const check = checkHierarchy(message, target);
 
     if (check === "USER")
@@ -83,11 +92,34 @@ module.exports = {
         embeds: [hierarchyBot(target)]
       });
 
-    await target.timeout(ms);
+    // ⏱ PARSE DURATION
+    const ms = parseDuration(durationInput);
+
+    if (ms === null)
+      return message.channel.send({
+        embeds: [fail("Invalid duration. Use 10m, 2h, 6d 3h 20m")]
+      });
+
+    // ⚠ MAX LIMIT (Discord rule)
+    const max = 28 * 24 * 60 * 60 * 1000;
+
+    if (ms > max)
+      return message.channel.send({
+        embeds: [fail("Maximum timeout is 28 days")]
+      });
+
+    // 🔥 ACTION
+    try {
+      await target.timeout(ms);
+    } catch (err) {
+      return message.channel.send({
+        embeds: [fail("Failed to mute user")]
+      });
+    }
 
     return message.channel.send({
       embeds: [
-        success(`<@${target.id}> was muted for ${durationInput || "10m"} by <@${message.author.id}>`)
+        success(`<@${target.id}> was muted for \`${durationInput}\` by <@${message.author.id}>`)
       ]
     });
   }
