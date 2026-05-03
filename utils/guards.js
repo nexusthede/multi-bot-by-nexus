@@ -29,7 +29,7 @@ function hasAccess(member, roleList = []) {
   );
 }
 
-// ⚠ hierarchy safety (SAFE VERSION)
+// ⚠ hierarchy safety (FIXED)
 function checkHierarchy(message, target) {
   if (!message?.guild || !message?.member || !target) return "USER";
 
@@ -39,7 +39,8 @@ function checkHierarchy(message, target) {
   const userRole = message.member.roles?.highest?.position || 0;
   const botRole = bot.roles?.highest?.position || 0;
 
-  if (targetRole >= userRole) return "USER";
+  // ❗ FIX: only block STRICTLY higher roles (not equal)
+  if (targetRole > userRole) return "USER";
   if (targetRole >= botRole) return "BOT";
 
   return "OK";
