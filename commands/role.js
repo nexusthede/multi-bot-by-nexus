@@ -27,7 +27,7 @@ module.exports = {
       });
 
     // 🔐 CENTRAL PERMISSION CHECK
-    if (!canUse(message.member, "addrole"))
+    if (!canUse(message.member, "role"))
       return message.channel.send({
         embeds: [permission("Owner / Admin / Sr Mod Only")]
       });
